@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>dataset_crawler</groupId>
+    <artifactId>dataset_crawler</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0</version>
+
+    <properties>
+        <!-- What JDK version to use -->
+        <jdk-version>1.6</jdk-version>
+        <!-- Output jar file name -->
+        <jar-name>dataset_crawler</jar-name>
+    </properties>
+
+    <build>
+        <!-- Jar as library, without dependencies -->
+        <finalName>${jar-name}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${jdk-version}</source>
+                    <target>${jdk-version}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Here it creates a proper executable jar file -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.de.unihannover.l3s.dataset_crawler.App</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <!-- Executable jar file name with all dependencies -->
+                    <finalName>${jar-name}</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <!-- this is used for inheritance merges -->
+                        <phase>package</phase>
+                        <!-- bind to the packaging phase -->
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>3.8.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jena</groupId>
+            <artifactId>jena-arq</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>rdf2go</groupId>
+            <artifactId>rdf2go.api</artifactId>
+            <version>4.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>rdf2go</groupId>
+            <artifactId>rdf2go.impl.jena</artifactId>
+            <version>4.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>rdf2go</groupId>
+            <artifactId>rdf2go.impl.sesame23</artifactId>
+            <version>4.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>openrdf.sesame</groupId>
+            <artifactId>sesame-http-client-2.6.10</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>openrdf.sesame</groupId>
+            <artifactId>sesame-model-2.6.10</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>openrdf.sesame</groupId>
+            <artifactId>sesame-repository-api-2.6.10</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>openrdf.sesame</groupId>
+            <artifactId>sesame-repository-http-2.6.10</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -706,7 +706,6 @@ public class IncrementalDatasetCrawler {
             //check if the number of datatype property objects is higher or equal to two, then we need to find the first match and skip the rest.
             if (sub_existing_prop_values.size() >= 2) {
                 if (sub_live_prop_values == null) {
-                    System.out.println("Deleted values\t" + existing_resource.resource_uri  + "=" + property_uri);
                     for (ResourceValue existing_value : sub_existing_prop_values) {
                         existing_value.isValid = false;
                     }
@@ -737,7 +736,6 @@ public class IncrementalDatasetCrawler {
             } else {
                 //check if both of them contain the same property
                 if (sub_live_prop_values == null) {
-                    System.out.println("Deleted values\t" + existing_resource.resource_uri  + "=" + property_uri);
                     //if the live resource does not contain these then mark them as deleted.
                     for (ResourceValue existing_value : sub_existing_prop_values) {
                         //we do not consider this for adding to the database and the corresponding logs.

@@ -34,7 +34,7 @@ public class CrawlLoadData {
 
         try {
             pst = conn.prepareStatement("SELECT d.dataset_id, d.dataset_name, d.dataset_id_datahub, d.dataset_url, da.is_available, da.crawl_id " +
-                    "FROM ld_dataset_crawler.dataset d, ld_dataset_crawler.dataset_availability da " +
+                    "FROM dataset d, dataset_availability da " +
                     "WHERE d.dataset_id=? AND d.dataset_id=da.dataset_id AND da.crawl_id BETWEEN ? AND ?");
 
             pst.setInt(1, dataset.id);
@@ -68,8 +68,7 @@ public class CrawlLoadData {
 
         try {
             pst = conn.prepareStatement("SELECT c.crawl_id, s.schema_id, s.schema_uri, dsl.log_type AS dataset_schema_log FROM " +
-                    "ld_dataset_crawler.dataset_schemas ds, ld_dataset_crawler.dataset d, ld_dataset_crawler.schemas s, " +
-                    "ld_dataset_crawler.dataset_schema_log dsl, ld_dataset_crawler.crawl_log c " +
+                    "dataset_namespaces ds, dataset d, namespaces s, dataset_namespaces_log dsl, ld_dataset_crawler.crawl_log c " +
                     "WHERE ds.dataset_id = d.dataset_id AND ds.schema_id = s.schema_id AND " +
                     "dsl.dataset_id = d.dataset_id AND dsl.schema_id = s.schema_id AND dsl.crawl_id = c.crawl_id AND " +
                     "d.dataset_id = ? AND c.crawl_id BETWEEN ? AND ?");
@@ -94,7 +93,7 @@ public class CrawlLoadData {
                 sub_schema_logs.put(dataset.id, rst.getString("log_type"));
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetSchemas", "exception reading the full the dataset schemas for" + dataset.id + "\n " + ex.getMessage(), null, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetSchemas", "exception reading the full the dataset namespaces for" + dataset.id + "\n " + ex.getMessage(), null, conn);
         }
     }
 
@@ -111,8 +110,7 @@ public class CrawlLoadData {
 
         try {
             pst = conn.prepareStatement("SELECT c.crawl_id, rt.type_id, rt.type_uri, s.schema_uri " +
-                    "FROM ld_dataset_crawler.crawl_log c, ld_dataset_crawler.dataset d, ld_dataset_crawler.resource_types rt, " +
-                    "ld_dataset_crawler.resource_type_log rtl, ld_dataset_crawler.schemas s, ld_dataset_crawler.dataset_schemas ds " +
+                    "FROM crawl_log c, dataset d, resource_types rt, resource_type_log rtl, namespaces s, dataset_namespaces ds " +
                     "WHERE c.crawl_id = rtl.crawl_id AND ds.schema_id = s.schema_id AND rt.schema_id = s.schema_id AND " +
                     "rt.type_id = rtl.type_id AND ds.dataset_id = ? AND c.crawl_id BETWEEN ? AND ? ");
 
@@ -131,7 +129,7 @@ public class CrawlLoadData {
                 resource_type.schema = dataset.schemas.get(rst.getString("schema_uri"));
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetResourceTypes", "exception reading the full the dataset schemas for" + dataset.id + "\n " + ex.getMessage(), null, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetResourceTypes", "exception reading the full the dataset namespaces for" + dataset.id + "\n " + ex.getMessage(), null, conn);
         }
     }
 
@@ -148,8 +146,7 @@ public class CrawlLoadData {
 
         try {
             pst = conn.prepareStatement("SELECT c.crawl_id, ri.resource_id, ri.resource_uri, ril.log_type, rt.type_id, rt.type_uri, ritl.log_type resource_instance_type_log " +
-                    "FROM ld_dataset_crawler.crawl_log c, ld_dataset_crawler.resource_instances ri, ld_dataset_crawler.resource_instance_log ril, " +
-                    "ld_dataset_crawler.resource_instance_type rit, ld_dataset_crawler.resource_instance_type_log ritl, ld_dataset_crawler.resource_types rt " +
+                    "FROM crawl_log c, resource_instances ri, resource_instance_log ril, resource_instance_type rit, resource_instance_type_log ritl, resource_types rt " +
                     "WHERE c.crawl_id = ril.crawl_id AND ri.resource_id = ril.resource_id AND ri.resource_id = rit.resource_id AND rit.type_id = rt.type_id AND " +
                     "rit.resource_id = ritl.resource_id AND ritl.crawl_id = c.crawl_id AND ri.dataset_id = ? AND c.crawl_id BETWEEN ? AND ?");
 
@@ -191,8 +188,7 @@ public class CrawlLoadData {
 
         try {
             pst = conn.prepareStatement("SELECT c.crawl_id, ri.resource_uri, rv.resource_value_id, rv.property_uri, rv.value, rvl.log_type " +
-                    "FROM ld_dataset_crawler.crawl_log c, ld_dataset_crawler.resource_instances ri, " +
-                    "ld_dataset_crawler.resource_values rv, ld_dataset_crawler.resource_value_log rvl " +
+                    "FROM crawl_log c, resource_instances ri, resource_values rv, resource_value_log rvl " +
                     "WHERE ri.dataset_id = ? AND ri.resource_id = rv.resource_id AND rvl.resource_value_id = rv.resource_value_id " +
                     "AND rvl.crawl_id = c.crawl_id AND c.crawl_id BETWEEN ? AND ?");
 

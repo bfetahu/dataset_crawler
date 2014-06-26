@@ -58,7 +58,6 @@ crawl_description=Linked Dataset Crawl description.
 ```
 
 ##### Datasets to crawl file template
-=================
 
 The file should contain per each line a dataset that needs to be crawled, where the different dataset attributes are separated with tab (\t) delimeter.
 

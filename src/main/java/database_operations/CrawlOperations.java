@@ -18,9 +18,9 @@ import java.util.Map.Entry;
 public class CrawlOperations {
     //for each crawl operation there is a CrawlLog which these operations are associated with. We keep an singelton object of the crawllog
     public CrawlLog crawl_log_global;
-
     private Connection conn;
-    public CrawlOperations (Connection conn){
+
+    public CrawlOperations(Connection conn) {
         this.conn = conn;
     }
     //=============================================================================================================================================
@@ -438,14 +438,14 @@ public class CrawlOperations {
         try {
             pst = conn.prepareStatement("INSERT INTO namespaces_instance_log(namespace_id,namespace_value_uri,log_type,crawl_id,dataset_id) VALUES(?,?,?,?,?)");
 
-            for(int crawl_id:namespace.namespace_instance_crawl_logs.keySet()){
-                for(int dataset_id:namespace.namespace_instance_crawl_logs.get(crawl_id).keySet()){
-                    for(String schi_val:namespace.namespace_instance_crawl_logs.get(crawl_id).get(dataset_id).keySet()){
-                        pst.setInt(1,namespace.namespace_id);
+            for (int crawl_id : namespace.namespace_instance_crawl_logs.keySet()) {
+                for (int dataset_id : namespace.namespace_instance_crawl_logs.get(crawl_id).keySet()) {
+                    for (String schi_val : namespace.namespace_instance_crawl_logs.get(crawl_id).get(dataset_id).keySet()) {
+                        pst.setInt(1, namespace.namespace_id);
                         pst.setString(2, schi_val);
                         pst.setString(3, namespace.namespace_instance_crawl_logs.get(crawl_id).get(dataset_id).get(schi_val));
-                        pst.setInt(4,crawl_id);
-                        pst.setInt(5,dataset_id);
+                        pst.setInt(4, crawl_id);
+                        pst.setInt(5, dataset_id);
 
                         pst.addBatch();
                     }
@@ -575,6 +575,7 @@ public class CrawlOperations {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceType", "exception writing resource instances types: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
     }
+
     /**
      * Writes for each resource instance its resource types.
      *
@@ -585,8 +586,8 @@ public class CrawlOperations {
         try {
             pst = conn.prepareStatement("INSERT INTO resource_instance_type(resource_id,type_id) VALUES(?,?)");
 
-            for (int res_id: res_type_instances.keySet()) {
-                for(int type_id:res_type_instances.get(res_id)){
+            for (int res_id : res_type_instances.keySet()) {
+                for (int type_id : res_type_instances.get(res_id)) {
                     pst.setInt(1, res_id);
                     pst.setInt(2, type_id);
                     pst.addBatch();
@@ -1378,7 +1379,7 @@ public class CrawlOperations {
 
                 namespace.namespace_uri = rs.getString("namespace_uri");
 
-                if(!sci_list.containsKey(rs.getString("namespace_value_uri"))){
+                if (!sci_list.containsKey(rs.getString("namespace_value_uri"))) {
                     NamespaceInstance sci = sci_list.get(rs.getString("namespace_value_uri"));
                     sci = sci == null ? new NamespaceInstance() : sci;
                     sci_list.put(rs.getString("namespace_value_uri"), sci);
@@ -1450,8 +1451,7 @@ public class CrawlOperations {
         PreparedStatement pst = null;
         try {
             pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.namespace_id, sc.namespace_uri "
-                    + "FROM resource_types rt, namespaces sc, dataset_namespaces ds "
-                    + "WHERE rt.namespace_id = sc.namespace_id AND ds.namespace_id = sc.namespace_id AND ds.dataset_id=?");
+                    + "FROM resource_types rt, namespaces sc, dataset_namespaces ds WHERE rt.namespace_id = sc.namespace_id AND ds.namespace_id = sc.namespace_id AND ds.dataset_id=?");
             pst.setInt(1, dataset.id);
 
             ResultSet rs = pst.executeQuery();
@@ -1630,5 +1630,40 @@ public class CrawlOperations {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadResourceTypeID", "exception while loading resource type id for type_uri: " + type_uri + "\n" + e.getMessage(), crawl_log_global, conn);
         }
         return -1;
+    }
+
+    /**
+     * Load active crawl setups.
+     *
+     * @return
+     */
+    public Map<Integer, Entry<String, String>> getActiveCrawlSetups() {
+        PreparedStatement pst = null;
+        try {
+            pst = conn.prepareStatement("SELECT setup_id, datahub_keywords, crawl_description FROM crawl_setups WHERE is_completed=0;");
+
+            Map<Integer, Entry<String, String>> lst = new HashMap<Integer, Entry<String, String>>();
+            ResultSet rst = pst.executeQuery();
+            while (rst.next()) {
+                Entry<String, String> entry = new AbstractMap.SimpleEntry<String, String>(rst.getString("datahub_keywords"), rst.getString("crawl_description"));
+                lst.put(rst.getInt("setup_id"), entry);
+            }
+            return lst;
+        } catch (SQLException e) {
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "getActiveCrawlSetups", "exception while loading active crawl setups" + "\n" + e.getMessage(), crawl_log_global, conn);
+        }
+        return null;
+    }
+
+    public void updateCrawlSetup(int crawl_setup_id){
+        PreparedStatement pst = null;
+        try {
+            pst = conn.prepareStatement("UPDATE crawl_setups SET is_completed=1 WHERE setup_id=?");
+            pst.setInt(1, crawl_setup_id);
+            pst.executeUpdate();
+
+        } catch (SQLException e) {
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "getActiveCrawlSetups", "exception while loading active crawl setups" + "\n" + e.getMessage(), crawl_log_global, conn);
+        }
     }
 }

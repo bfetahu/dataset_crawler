@@ -21,9 +21,11 @@ import java.util.Map.Entry;
  */
 public class IncrementalDatasetCrawler {
     public Connection mysql_connection;
+    public CrawlOperations co;
 
     public IncrementalDatasetCrawler(Map<String, String> props) {
         mysql_connection = DatabaseConnection.getMySQLConnection(props.get("mysql_host"), props.get("mysql_schema"), props.get("mysql_user"), props.get("mysql_pwd"));
+        co = new CrawlOperations(mysql_connection);
     }
 
     /**
@@ -109,16 +111,15 @@ public class IncrementalDatasetCrawler {
      *
      * @param crawl_log
      */
-    public void crawlData(CrawlLog crawl_log) {
+    public void crawlData(CrawlLog crawl_log, String datasets_str) {
         Metadata metadata_crawler = new Metadata();
         DataCrawler dc = new DataCrawler(mysql_connection, crawl_log);
-        CrawlOperations co = new CrawlOperations(mysql_connection);
 
         co.crawl_log_global = crawl_log;
         dc.crawl_log_global = crawl_log;
         metadata_crawler.crawl_log_global = crawl_log;
 
-        String[] datasets_groups = FileUtils.readText(Properties.properties.get("datasets_path")).split("\n");
+        String[] datasets_groups = datasets_str.split("\n");
         List<Dataset> datasets = new ArrayList<Dataset>();
 
         for(String dataset_line:datasets_groups){

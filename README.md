@@ -57,4 +57,15 @@ The description of the dataset crawl.
 crawl_description=Linked Dataset Crawl description.
 ```
 
+##### Datasets to crawl file template
+=================
+
+The file should contain per each line a dataset that needs to be crawled, where the different dataset attributes are separated with tab (\t) delimeter.
+
+\# DATASET_ID  DATASET_ENDPOINT_URL  DATASET_DESCRIPTION
+ted-talks http://data.linkededucation.org/request/ted/sparql  Metadata and transcripts of TED talks (www.ted.com).
+
+
+
+
 

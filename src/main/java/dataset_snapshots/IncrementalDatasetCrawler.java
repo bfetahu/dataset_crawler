@@ -64,7 +64,7 @@ public class IncrementalDatasetCrawler {
         boolean is_datahub_group_search = Properties.properties.get("is_datahub_group_search").equals("true");
         List<Dataset> datasets = metadata_crawler.searchDataHub(is_datahub_group_search, datahub_group, mysql_connection);
 
-        //load first the crawled schemas and resource types.
+        //load first the crawled namespaces and resource types.
         Set<String> existing_schemas = co.loadSchemaURI(mysql_connection);
 
         //write the crawled metadata.
@@ -84,7 +84,7 @@ public class IncrementalDatasetCrawler {
                 continue;
             }
 
-            //crawl the dataset schemas
+            //crawl the dataset namespaces
             crawlDatasetSchemas(dataset, existing_schemas, crawl_log, co, dc);
 
             //crawl the dataset resource types first
@@ -139,7 +139,7 @@ public class IncrementalDatasetCrawler {
             dataset.url = dataset_url;
             datasets.add(dataset);
         }
-        //load first the crawled schemas and resource types.
+        //load first the crawled namespaces and resource types.
         Set<String> existing_schemas = co.loadSchemaURI(mysql_connection);
 
         //write the crawled metadata.
@@ -159,7 +159,7 @@ public class IncrementalDatasetCrawler {
                 continue;
             }
 
-            //crawl the dataset schemas
+            //crawl the dataset namespaces
             crawlDatasetSchemas(dataset, existing_schemas, crawl_log, co, dc);
 
             //crawl the dataset resource types first
@@ -177,74 +177,74 @@ public class IncrementalDatasetCrawler {
     }
 
     /**
-     * Extracts and writes the associated schemas with a dataset.
+     * Extracts and writes the associated namespaces with a dataset.
      *
      * @param dataset
      */
     public void crawlDatasetSchemas(Dataset dataset, Set<String> existing_schemas, CrawlLog crawl_log, CrawlOperations co, DataCrawler dc) {
-        //load the existing datataset schemas
-        Map<Integer, Schema> dataset_existing_schemas = co.loadDatasetSchemaURI(dataset);
+        //load the existing datataset namespaces
+        Map<Integer, Namespaces> dataset_existing_schemas = co.loadDatasetSchemaURI(dataset);
 
-        //crawl up to date schemas from the endpoint
-        Map<String, Schema> schemas = dc.extractDatasetNamespaces(dataset, Long.valueOf(Properties.properties.get("timeout")));
+        //crawl up to date namespaces from the endpoint
+        Map<String, Namespaces> schemas = dc.extractDatasetNamespaces(dataset, Long.valueOf(Properties.properties.get("timeout")));
         if (schemas == null || schemas.isEmpty()) {
             return;
         }
 
         for (String schema_uri : schemas.keySet()) {
-            Schema schema = schemas.get(schema_uri);
-            if (!existing_schemas.contains(schema.schema_uri)) {
+            Namespaces schema = schemas.get(schema_uri);
+            if (!existing_schemas.contains(schema.namespace_uri)) {
                 co.writeSchema(schema);
             }
 
-            //log the crawled schemas for the respective datasets
-            if (dataset_existing_schemas == null || !dataset_existing_schemas.values().contains(schema.schema_uri)) {
+            //log the crawled namespaces for the respective datasets
+            if (dataset_existing_schemas == null || !dataset_existing_schemas.values().contains(schema.namespace_uri)) {
                 co.writeDatasetSchemas(dataset, schema);
 
-                //store the dataset schema logs. Create the new schema objects with schema_id, schema_uri and the corresponding crawl_id and dataset_id\F
-                Schema schema_log = new Schema();
-                schema_log.schema_id = schema.schema_id;
-                schema_log.schema_uri = schema.schema_uri;
+                //store the dataset namespace logs. Create the new namespace objects with namespace_id, namespace_uri and the corresponding crawl_id and dataset_id\F
+                Namespaces schema_log = new Namespaces();
+                schema_log.namespace_id = schema.namespace_id;
+                schema_log.namespace_uri = schema.namespace_uri;
 
                 Map<Integer, String> log_types = new TreeMap<Integer, String>();
                 log_types.put(dataset.id, Properties.crawl_log_status.added.name());
-                schema_log.dataset_schema_crawl_logs.put(crawl_log.crawl_id, log_types);
+                schema_log.dataset_namespace_crawl_logs.put(crawl_log.crawl_id, log_types);
 
                 //write the changes
                 co.writeDatasetSchemasLogs(schema_log);
 
-                //write the schema instances
+                //write the namespace instances
                 co.writeSchemaInstances(schema);
-                //add the logs for the schema instances : crawl_id -> dataset_id -> schema_value_uri, log_type
-                Map<Integer, Map<String, String>> sub_schi_log = schema.schema_instance_crawl_logs.get(crawl_log.crawl_id);
+                //add the logs for the namespace instances : crawl_id -> dataset_id -> namespace_value_uri, log_type
+                Map<Integer, Map<String, String>> sub_schi_log = schema.namespace_instance_crawl_logs.get(crawl_log.crawl_id);
                 sub_schi_log = sub_schi_log == null ? new HashMap<Integer, Map<String, String>>() : sub_schi_log;
-                schema.schema_instance_crawl_logs.put(crawl_log.crawl_id, sub_schi_log);
+                schema.namespace_instance_crawl_logs.put(crawl_log.crawl_id, sub_schi_log);
 
                 Map<String, String> dataset_schi_log = sub_schi_log.get(dataset.id);
                 dataset_schi_log = dataset_schi_log == null ? new HashMap<String, String>() : dataset_schi_log;
                 sub_schi_log.put(dataset.id, dataset_schi_log);
 
-                for (SchemaInstance schi : schema.instances) {
-                    dataset_schi_log.put(schi.schema_value_uri, Properties.crawl_log_status.added.name());
+                for (NamespaceInstance schi : schema.instances) {
+                    dataset_schi_log.put(schi.namespace_value_uri, Properties.crawl_log_status.added.name());
                 }
 
                 co.writeSchemaInstanceLogs(schema);
             }
         }
 
-        //remove those schemas that are still present in the dataset
+        //remove those namespaces that are still present in the dataset
         if (dataset_existing_schemas != null) {
             for (int schema_id : dataset_existing_schemas.keySet()) {
                 if (schemas.containsKey(dataset_existing_schemas.get(schema_id))) {
                     continue;
                 }
 
-                //store the dataset schema logs. Create the new schema objects with schema_id, schema_uri and the corresponding crawl_id and dataset_id\F
-                Schema schema = dataset_existing_schemas.get(schema_id);
+                //store the dataset namespace logs. Create the new namespace objects with namespace_id, namespace_uri and the corresponding crawl_id and dataset_id\F
+                Namespaces schema = dataset_existing_schemas.get(schema_id);
 
                 Map<Integer, String> log_types = new TreeMap<Integer, String>();
                 log_types.put(dataset.id, Properties.crawl_log_status.deleted.name());
-                schema.dataset_schema_crawl_logs.put(crawl_log.crawl_id, log_types);
+                schema.dataset_namespace_crawl_logs.put(crawl_log.crawl_id, log_types);
 
                 //write the changes
                 co.writeDatasetSchemasLogs(schema);

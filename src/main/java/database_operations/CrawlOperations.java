@@ -73,48 +73,47 @@ public class CrawlOperations {
     }
 
     /**
-     * Writes the dataset schemas.
+     * Writes the dataset namespaces.
      *
      * @param dataset
-     * @param schema
+     * @param namespace
      */
-    public void writeDatasetSchemas(Dataset dataset, Schema schema) {
+    public void writeDatasetSchemas(Dataset dataset, Namespaces namespace) {
         PreparedStatement pst = null;
 
         try {
-            pst = conn.prepareStatement("INSERT INTO dataset_namespaces(dataset_id,schema_id) VALUES (?,?)");
+            pst = conn.prepareStatement("INSERT INTO dataset_namespaces(dataset_id,namespace_id) VALUES (?,?)");
             pst.setInt(1, dataset.id);
-            pst.setInt(2, schema.schema_id);
+            pst.setInt(2, namespace.namespace_id);
 
             int rst = pst.executeUpdate();
 
             if (rst != 0) {
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetSchemas", "success writing dataset namespaces for dataset: " + dataset.dataset_id_datahub + " and namespaces: " + schema.schema_uri, crawl_log_global, conn);
+                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetSchemas", "success writing dataset namespaces for dataset: " + dataset.dataset_id_datahub + " and namespaces: " + namespace.namespace_uri, crawl_log_global, conn);
             } else {
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetSchemas", "error writing dataset namespaces for dataset: " + dataset.dataset_id_datahub + " and namespaces: " + schema.schema_uri, crawl_log_global, conn);
+                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetSchemas", "error writing dataset namespaces for dataset: " + dataset.dataset_id_datahub + " and namespaces: " + namespace.namespace_uri, crawl_log_global, conn);
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "writeDatasetSchemas", "exception writing dataset namespaces for" + dataset.dataset_id_datahub + " and namespaces: " + schema.schema_uri + "\n " + ex.getMessage(), crawl_log_global, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "writeDatasetSchemas", "exception writing dataset namespaces for" + dataset.dataset_id_datahub + " and namespaces: " + namespace.namespace_uri + "\n " + ex.getMessage(), crawl_log_global, conn);
         }
     }
 
     /**
-     * Writes the dataset schemas log crawls.
+     * Writes the dataset namespaces log crawls.
      *
-     * @param schema
-     * @param schema
+     * @param namespace
      */
-    public void writeDatasetSchemasLogs(Schema schema) {
+    public void writeDatasetSchemasLogs(Namespaces namespace) {
         PreparedStatement pst = null;
 
         try {
-            pst = conn.prepareStatement("INSERT INTO dataset_namespaces_log(dataset_id,schema_id,log_type,crawl_id) VALUES (?,?,?,?)");
-            for (int crawl_id : schema.dataset_schema_crawl_logs.keySet()) {
-                for (int dataset_id : schema.dataset_schema_crawl_logs.get(crawl_id).keySet()) {
-                    String log_type = schema.dataset_schema_crawl_logs.get(crawl_id).get(dataset_id);
+            pst = conn.prepareStatement("INSERT INTO dataset_namespaces_log(dataset_id,namespace_id,log_type,crawl_id) VALUES (?,?,?,?)");
+            for (int crawl_id : namespace.dataset_namespace_crawl_logs.keySet()) {
+                for (int dataset_id : namespace.dataset_namespace_crawl_logs.get(crawl_id).keySet()) {
+                    String log_type = namespace.dataset_namespace_crawl_logs.get(crawl_id).get(dataset_id);
 
                     pst.setInt(1, dataset_id);
-                    pst.setInt(2, schema.schema_id);
+                    pst.setInt(2, namespace.namespace_id);
                     pst.setString(3, log_type);
                     pst.setInt(4, crawl_id);
 
@@ -205,11 +204,11 @@ public class CrawlOperations {
     public void writeResourceTypes(Map<String, ResourceType> resource_types) {
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("INSERT INTO resource_types(type_uri,schema_id) VALUES(?,?)", Statement.RETURN_GENERATED_KEYS);
+            pst = conn.prepareStatement("INSERT INTO resource_types(type_uri,namespace_id) VALUES(?,?)", Statement.RETURN_GENERATED_KEYS);
             for (String resource_type_uri : resource_types.keySet()) {
                 ResourceType resource_type = resource_types.get(resource_type_uri);
                 pst.setString(1, resource_type.type_uri);
-                pst.setInt(2, resource_type.schema.schema_id);
+                pst.setInt(2, resource_type.namespace.namespace_id);
 
                 pst.addBatch();
             }
@@ -372,15 +371,15 @@ public class CrawlOperations {
     }
 
     /**
-     * Writes the schema data into the database.
+     * Writes the namespace data into the database.
      *
-     * @param schema
+     * @param namespace
      */
-    public void writeSchema(Schema schema) {
+    public void writeSchema(Namespaces namespace) {
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("INSERT INTO namespaces(schema_uri) VALUES(?)", Statement.RETURN_GENERATED_KEYS);
-            pst.setString(1, schema.schema_uri);
+            pst = conn.prepareStatement("INSERT INTO namespaces(namespace_uri) VALUES(?)", Statement.RETURN_GENERATED_KEYS);
+            pst.setString(1, namespace.namespace_uri);
 
             int rst = pst.executeUpdate();
             //get the generated auto increment keys.
@@ -388,29 +387,29 @@ public class CrawlOperations {
 
             if (rst != 0) {
                 rs_keys.next();
-                schema.schema_id = rs_keys.getInt(1);
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeSchema", "success writing namespaces: " + schema.schema_uri, crawl_log_global, conn);
+                namespace.namespace_id = rs_keys.getInt(1);
+                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeSchema", "success writing namespaces: " + namespace.namespace_uri, crawl_log_global, conn);
             } else {
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchema", "error writing namespaces: " + schema.schema_uri, crawl_log_global, conn);
+                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchema", "error writing namespaces: " + namespace.namespace_uri, crawl_log_global, conn);
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchema", "exception writing namespaces: " + schema.schema_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchema", "exception writing namespaces: " + namespace.namespace_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
     }
 
     /**
-     * Writes the schema instances for a particular schema uri.
+     * Writes the namespace instances for a particular namespace uri.
      *
-     * @param schema
+     * @param namespace
      */
-    public void writeSchemaInstances(Schema schema) {
+    public void writeSchemaInstances(Namespaces namespace) {
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("INSERT INTO namespaces_instances(schema_id,schema_value_uri,schema_value_type) VALUES(?,?,?)", Statement.RETURN_GENERATED_KEYS);
-            for (SchemaInstance schema_instance : schema.instances) {
-                pst.setInt(1, schema.schema_id);
-                pst.setString(2, schema_instance.schema_value_uri);
-                pst.setBoolean(3, schema_instance.isProperty);
+            pst = conn.prepareStatement("INSERT INTO namespaces_instances(namespace_id,namespace_value_uri,namespace_value_type) VALUES(?,?,?)", Statement.RETURN_GENERATED_KEYS);
+            for (NamespaceInstance namespace_instance : namespace.instances) {
+                pst.setInt(1, namespace.namespace_id);
+                pst.setString(2, namespace_instance.namespace_value_uri);
+                pst.setBoolean(3, namespace_instance.isProperty);
 
                 pst.addBatch();
             }
@@ -419,32 +418,32 @@ public class CrawlOperations {
 
             for (int i = 0; i < rst.length; i++) {
                 if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeSchemaInstances", "success writing namespaces instance: " + schema.schema_uri + " and instance " + schema.instances.get(i).schema_value_uri, crawl_log_global, conn);
+                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeSchemaInstances", "success writing namespaces instance: " + namespace.namespace_uri + " and instance " + namespace.instances.get(i).namespace_value_uri, crawl_log_global, conn);
                 } else {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstances", "error writing namespaces instances: " + schema.schema_uri + " and instance " + schema.instances.get(i).schema_value_uri, crawl_log_global, conn);
+                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstances", "error writing namespaces instances: " + namespace.namespace_uri + " and instance " + namespace.instances.get(i).namespace_value_uri, crawl_log_global, conn);
                 }
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstances", "exception writing namespaces instance: " + schema.schema_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstances", "exception writing namespaces instance: " + namespace.namespace_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
     }
 
     /**
-     * Writes the schema instances for a particular schema uri.
+     * Writes the namespace instances for a particular namespace uri.
      *
-     * @param schema
+     * @param namespace
      */
-    public void writeSchemaInstanceLogs(Schema schema) {
+    public void writeSchemaInstanceLogs(Namespaces namespace) {
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("INSERT INTO namespaces_instance_log(schema_id,schema_value_uri,log_type,crawl_id,dataset_id) VALUES(?,?,?,?,?)");
+            pst = conn.prepareStatement("INSERT INTO namespaces_instance_log(namespace_id,namespace_value_uri,log_type,crawl_id,dataset_id) VALUES(?,?,?,?,?)");
 
-            for(int crawl_id:schema.schema_instance_crawl_logs.keySet()){
-                for(int dataset_id:schema.schema_instance_crawl_logs.get(crawl_id).keySet()){
-                    for(String schi_val:schema.schema_instance_crawl_logs.get(crawl_id).get(dataset_id).keySet()){
-                        pst.setInt(1,schema.schema_id);
+            for(int crawl_id:namespace.namespace_instance_crawl_logs.keySet()){
+                for(int dataset_id:namespace.namespace_instance_crawl_logs.get(crawl_id).keySet()){
+                    for(String schi_val:namespace.namespace_instance_crawl_logs.get(crawl_id).get(dataset_id).keySet()){
+                        pst.setInt(1,namespace.namespace_id);
                         pst.setString(2, schi_val);
-                        pst.setString(3, schema.schema_instance_crawl_logs.get(crawl_id).get(dataset_id).get(schi_val));
+                        pst.setString(3, namespace.namespace_instance_crawl_logs.get(crawl_id).get(dataset_id).get(schi_val));
                         pst.setInt(4,crawl_id);
                         pst.setInt(5,dataset_id);
 
@@ -456,13 +455,13 @@ public class CrawlOperations {
 
             for (int i = 0; i < rst.length; i++) {
                 if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeSchemaInstanceLogs", "success writing namespaces instance logs: " + schema.schema_uri, crawl_log_global, conn);
+                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeSchemaInstanceLogs", "success writing namespaces instance logs: " + namespace.namespace_uri, crawl_log_global, conn);
                 } else {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstanceLogs", "error writing namespaces instances logs: " + schema.schema_uri, crawl_log_global, conn);
+                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstanceLogs", "error writing namespaces instances logs: " + namespace.namespace_uri, crawl_log_global, conn);
                 }
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstanceLogs", "exception writing namespaces instance logs: " + schema.schema_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeSchemaInstanceLogs", "exception writing namespaces instance logs: " + namespace.namespace_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
     }
 
@@ -996,8 +995,8 @@ public class CrawlOperations {
         Map<String, Dataset> dataset_metadata = new TreeMap<String, Dataset>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT d.dataset_id, d.dataset_name, d.dataset_description, d.dataset_url, d.dataset_id_datahub, ds.schema_id, sc.schema_uri "
-                    + "FROM dataset_namespaces ds, dataset d, namespaces sc WHERE ds.dataset_id = d.dataset_id AND sc.schema_id = ds.schema_id;");
+            pst = conn.prepareStatement("SELECT d.dataset_id, d.dataset_name, d.dataset_description, d.dataset_url, d.dataset_id_datahub, ds.namespace_id, sc.namespace_uri "
+                    + "FROM dataset_namespaces ds, dataset d, namespaces sc WHERE ds.dataset_id = d.dataset_id AND sc.namespace_id = ds.namespace_id;");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
@@ -1011,12 +1010,12 @@ public class CrawlOperations {
                 dataset.url = rs.getString("dataset_url");
                 dataset.dataset_id_datahub = rs.getString("dataset_id_datahub");
 
-                Schema schema = dataset.schemas.get(rs.getString("schema_uri"));
-                schema = schema == null ? new Schema() : schema;
-                dataset.schemas.put(rs.getString("schema_uri"), schema);
+                Namespaces namespace = dataset.namespaces.get(rs.getString("namespace_uri"));
+                namespace = namespace == null ? new Namespaces() : namespace;
+                dataset.namespaces.put(rs.getString("namespace_uri"), namespace);
 
-                schema.schema_id = rs.getInt("schema_id");
-                schema.schema_uri = rs.getString("schema_uri");
+                namespace.namespace_id = rs.getInt("namespace_id");
+                namespace.namespace_uri = rs.getString("namespace_uri");
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadDatasetMetadata", "success while loading dataset metadata", crawl_log_global, conn);
             return dataset_metadata;
@@ -1027,58 +1026,58 @@ public class CrawlOperations {
     }
 
     /**
-     * Loads the used schemas from the crawled datasets, along with their
+     * Loads the used namespaces from the crawled datasets, along with their
      * particular types and associations with datasets.
      *
      * @return
      */
-    public Map<Integer, Schema> loadSchemas(Connection conn) {
-        Map<Integer, Schema> schemas = new TreeMap<Integer, Schema>();
+    public Map<Integer, Namespaces> loadSchemas(Connection conn) {
+        Map<Integer, Namespaces> namespaces = new TreeMap<Integer, Namespaces>();
 
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT sc.schema_id, sc.schema_uri, sci.schema_value_uri, sci.schema_value_type, "
-                    + "scl.log_type, c.crawl_id, scl.dataset_id, dscl.log_type as dataset_schema_log_type "
+            pst = conn.prepareStatement("SELECT sc.namespace_id, sc.namespace_uri, sci.namespace_value_uri, sci.namespace_value_type, "
+                    + "scl.log_type, c.crawl_id, scl.dataset_id, dscl.log_type as dataset_namespace_log_type "
                     + "FROM namespaces sc, namespaces_instances sci, namespaces_log scl, dataset_namespaces_log dscl, dataset d, crawl_log c "
-                    + "WHERE sc.schema_id = sci.schema_id AND sc.schema_id = scl.schema_id "
-                    + "AND sci.schema_value_uri = scl.schema_value_uri AND sc.schema_id = dscl.schema_id "
+                    + "WHERE sc.namespace_id = sci.namespace_id AND sc.namespace_id = scl.namespace_id "
+                    + "AND sci.namespace_value_uri = scl.namespace_value_uri AND sc.namespace_id = dscl.namespace_id "
                     + "AND d.dataset_id = dscl.dataset_id AND c.crawl_id = dscl.crawl_id AND scl.crawl_id = c.crawl_id");
 
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
-                Schema schema = schemas.get(rs.getInt("schema_id"));
-                schema = schema == null ? new Schema() : schema;
-                schemas.put(rs.getInt("schema_id"), schema);
+                Namespaces namespace = namespaces.get(rs.getInt("namespace_id"));
+                namespace = namespace == null ? new Namespaces() : namespace;
+                namespaces.put(rs.getInt("namespace_id"), namespace);
 
-                schema.schema_uri = rs.getString("schema_uri");
+                namespace.namespace_uri = rs.getString("namespace_uri");
 
                 //add the instances
-                SchemaInstance schema_instance = new SchemaInstance();
-                schema_instance.schema_value_uri = rs.getString("schema_value_uri");
-                schema_instance.isProperty = rs.getBoolean("schema_value_type");
-                schema.instances.add(schema_instance);
+                NamespaceInstance namespace_instance = new NamespaceInstance();
+                namespace_instance.namespace_value_uri = rs.getString("namespace_value_uri");
+                namespace_instance.isProperty = rs.getBoolean("namespace_value_type");
+                namespace.instances.add(namespace_instance);
 
                 //add the crawl logs.
-                Map<Integer, Map<String, String>> sub_schema_crawl_logs = schema.schema_instance_crawl_logs.get(rs.getInt("crawl_id"));
-                sub_schema_crawl_logs = sub_schema_crawl_logs == null ? new HashMap<Integer, Map<String, String>>() : sub_schema_crawl_logs;
-                schema.schema_instance_crawl_logs.put(rs.getInt("crawl_id"), sub_schema_crawl_logs);
+                Map<Integer, Map<String, String>> sub_namespace_crawl_logs = namespace.namespace_instance_crawl_logs.get(rs.getInt("crawl_id"));
+                sub_namespace_crawl_logs = sub_namespace_crawl_logs == null ? new HashMap<Integer, Map<String, String>>() : sub_namespace_crawl_logs;
+                namespace.namespace_instance_crawl_logs.put(rs.getInt("crawl_id"), sub_namespace_crawl_logs);
 
-                Map<String, String> dataset_sub_schema_crawl_logs = sub_schema_crawl_logs.get(rs.getInt("dataset_id"));
-                dataset_sub_schema_crawl_logs = dataset_sub_schema_crawl_logs == null ? new TreeMap<String, String>() : dataset_sub_schema_crawl_logs;
-                sub_schema_crawl_logs.put(rs.getInt("dataset_id"), dataset_sub_schema_crawl_logs);
+                Map<String, String> dataset_sub_namespace_crawl_logs = sub_namespace_crawl_logs.get(rs.getInt("dataset_id"));
+                dataset_sub_namespace_crawl_logs = dataset_sub_namespace_crawl_logs == null ? new TreeMap<String, String>() : dataset_sub_namespace_crawl_logs;
+                sub_namespace_crawl_logs.put(rs.getInt("dataset_id"), dataset_sub_namespace_crawl_logs);
 
-                dataset_sub_schema_crawl_logs.put(rs.getString("schema_value_uri"), rs.getString("log_type"));
+                dataset_sub_namespace_crawl_logs.put(rs.getString("namespace_value_uri"), rs.getString("log_type"));
 
-                //add the dataset_schema crawl logs
-                Map<Integer, String> dataset_schema_log_crawl_log = schema.dataset_schema_crawl_logs.get(rs.getInt("crawl_id"));
-                dataset_schema_log_crawl_log = dataset_schema_log_crawl_log == null ? new TreeMap<Integer, String>() : dataset_schema_log_crawl_log;
-                schema.dataset_schema_crawl_logs.put(rs.getInt("crawl_id"), dataset_schema_log_crawl_log);
+                //add the dataset_namespaces crawl logs
+                Map<Integer, String> dataset_namespace_log_crawl_log = namespace.dataset_namespace_crawl_logs.get(rs.getInt("crawl_id"));
+                dataset_namespace_log_crawl_log = dataset_namespace_log_crawl_log == null ? new TreeMap<Integer, String>() : dataset_namespace_log_crawl_log;
+                namespace.dataset_namespace_crawl_logs.put(rs.getInt("crawl_id"), dataset_namespace_log_crawl_log);
 
-                dataset_schema_log_crawl_log.put(rs.getInt("dataset_id"), rs.getString("dataset_schema_log_type"));
+                dataset_namespace_log_crawl_log.put(rs.getInt("dataset_id"), rs.getString("dataset_namespace_log_type"));
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadSchemas", "success while loading dataset namespaces.", crawl_log_global, conn);
-            return schemas;
+            return namespaces;
 
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadSchemas", "exception while loading dataset namespaces \n" + ex.getMessage(), crawl_log_global, conn);
@@ -1189,28 +1188,28 @@ public class CrawlOperations {
     }
 
     /**
-     * Load a particular schema based on its URI.
+     * Load a particular namespace based on its URI.
      *
-     * @param schema_uri
+     * @param namespace_uri
      * @return
      */
-    public Schema loadSchema(String schema_uri) {
+    public Namespaces loadSchema(String namespace_uri) {
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT schema_id FROM namespaces WHERE schema_uri = ?");
-            pst.setString(1, schema_uri);
+            pst = conn.prepareStatement("SELECT namespace_id FROM namespaces WHERE namespace_uri = ?");
+            pst.setString(1, namespace_uri);
 
             ResultSet rs = pst.executeQuery();
             if (rs.next()) {
-                Schema schema = new Schema();
-                schema.schema_id = rs.getInt("schema_id");
-                schema.schema_uri = schema_uri;
+                Namespaces namespace = new Namespaces();
+                namespace.namespace_id = rs.getInt("namespace_id");
+                namespace.namespace_uri = namespace_uri;
 
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadSchema", "success while loading namespaces " + schema_uri + "\n", crawl_log_global, conn);
-                return schema;
+                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadSchema", "success while loading namespaces " + namespace_uri + "\n", crawl_log_global, conn);
+                return namespace;
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadSchema", "exception while loading namespaces " + schema_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadSchema", "exception while loading namespaces " + namespace_uri + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
         return null;
     }
@@ -1225,9 +1224,9 @@ public class CrawlOperations {
         Map<Integer, ResourceType> resource_types = new TreeMap<Integer, ResourceType>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, rt.schema_id, sc.schema_uri, rtl.resource_id, rtl.log_type, rtl.crawl_id, ri.dataset_id "
+            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, rt.namespace_id, sc.namespace_uri, rtl.resource_id, rtl.log_type, rtl.crawl_id, ri.dataset_id "
                     + "FROM resource_types rt, resource_type_log rtl, resource_instances ri, namespaces sc "
-                    + "WHERE rt.type_id = rtl.type_id AND rtl.resource_id = ri.resource_id AND sc.schema_id = rt.schema_id;");
+                    + "WHERE rt.type_id = rtl.type_id AND rtl.resource_id = ri.resource_id AND sc.namespace_id = rt.namespace_id;");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
@@ -1237,9 +1236,9 @@ public class CrawlOperations {
 
                 resource_type.resource_type_id = rs.getInt("type_id");
                 resource_type.type_uri = rs.getString("type_uri");
-                //set the schema information
-                resource_type.schema.schema_id = rs.getInt("schema_id");
-                resource_type.schema.schema_uri = rs.getString("schema_uri");
+                //set the namespace information
+                resource_type.namespace.namespace_id = rs.getInt("namespace_id");
+                resource_type.namespace.namespace_uri = rs.getString("namespace_uri");
 
                 Map<Integer, Map<Integer, String>> crawl_sub_res_type_crawl_logs = resource_type.resource_type_crawl_logs.get(rs.getInt("crawl_id"));
                 crawl_sub_res_type_crawl_logs = crawl_sub_res_type_crawl_logs == null ? new TreeMap<Integer, Map<Integer, String>>() : crawl_sub_res_type_crawl_logs;
@@ -1269,8 +1268,8 @@ public class CrawlOperations {
         Map<Integer, ResourceType> resource_types = new TreeMap<Integer, ResourceType>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, rt.schema_id, sc.schema_uri "
-                    + "FROM resource_types rt, namespaces sc WHERE sc.schema_id = rt.schema_id;");
+            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, rt.namespace_id, sc.namespace_uri "
+                    + "FROM resource_types rt, namespaces sc WHERE sc.namespace_id = rt.namespace_id;");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
@@ -1280,9 +1279,9 @@ public class CrawlOperations {
 
                 resource_type.resource_type_id = rs.getInt("type_id");
                 resource_type.type_uri = rs.getString("type_uri");
-                //set the schema information
-                resource_type.schema.schema_id = rs.getInt("schema_id");
-                resource_type.schema.schema_uri = rs.getString("schema_uri");
+                //set the namespace information
+                resource_type.namespace.namespace_id = rs.getInt("namespace_id");
+                resource_type.namespace.namespace_uri = rs.getString("namespace_uri");
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadResourceTypes", "success while loading resource types ", crawl_log_global, conn);
             return resource_types;
@@ -1331,22 +1330,22 @@ public class CrawlOperations {
     //=============================================================================================================================================
 
     /**
-     * Loads the set of already existing schemas from the crawled data.
+     * Loads the set of already existing namespaces from the crawled data.
      *
      * @return
      */
     public Set<String> loadSchemaURI(Connection conn) {
-        Set<String> schemas = new HashSet<String>();
+        Set<String> namespaces = new HashSet<String>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT sc.schema_uri FROM namespaces");
+            pst = conn.prepareStatement("SELECT sc.namespace_uri FROM namespaces");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
-                schemas.add(rs.getString("schema_uri"));
+                namespaces.add(rs.getString("namespace_uri"));
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadSchemaURI", "success while loading namespaces URIs", crawl_log_global, conn);
-            return schemas;
+            return namespaces;
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadSchemaURI", "exception while loading namespaces URIs \n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -1355,52 +1354,52 @@ public class CrawlOperations {
     }
 
     /**
-     * Loads the set of already existing schemas from the crawled data for a
+     * Loads the set of already existing namespaces from the crawled data for a
      * specific dataset.
      *
      * @return
      */
-    public Map<Integer, Schema> loadDatasetSchemaURI(Dataset dataset) {
-        Map<Integer, Schema> schemas = new HashMap<Integer, Schema>();
-        Map<String, SchemaInstance> sci_list = new HashMap<String, SchemaInstance>();
+    public Map<Integer, Namespaces> loadDatasetSchemaURI(Dataset dataset) {
+        Map<Integer, Namespaces> namespaces = new HashMap<Integer, Namespaces>();
+        Map<String, NamespaceInstance> sci_list = new HashMap<String, NamespaceInstance>();
 
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT ds.schema_id, sc.schema_uri, sci.schema_value_uri, sci.schema_value_type, scil.log_type, scil.crawl_id, scil.dataset_id " +
+            pst = conn.prepareStatement("SELECT ds.namespace_id, sc.namespace_uri, sci.namespace_value_uri, sci.namespace_value_type, scil.log_type, scil.crawl_id, scil.dataset_id " +
                     "FROM dataset_namespaces ds, namespaces sc, namespaces_instances sci, namespaces_instance_log scil " +
-                    "WHERE ds.schema_id = sc.schema_id AND sc.schema_id=sci.schema_id AND sci.schema_id = scil.schema_id AND ds.dataset_id=?;");
+                    "WHERE ds.namespace_id = sc.namespace_id AND sc.namespace_id=sci.namespace_id AND sci.namespace_id = scil.namespace_id AND ds.dataset_id=?;");
             pst.setInt(1, dataset.id);
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
-                Schema schema = schemas.get(rs.getInt("schema_id"));
-                schema = schema == null ? new Schema() : schema;
-                schemas.put(rs.getInt("schema_id"), schema);
+                Namespaces namespace = namespaces.get(rs.getInt("namespace_id"));
+                namespace = namespace == null ? new Namespaces() : namespace;
+                namespaces.put(rs.getInt("namespace_id"), namespace);
 
-                schema.schema_uri = rs.getString("schema_uri");
+                namespace.namespace_uri = rs.getString("namespace_uri");
 
-                if(!sci_list.containsKey(rs.getString("schema_value_uri"))){
-                    SchemaInstance sci = sci_list.get(rs.getString("schema_value_uri"));
-                    sci = sci == null ? new SchemaInstance() : sci;
-                    sci_list.put(rs.getString("schema_value_uri"), sci);
+                if(!sci_list.containsKey(rs.getString("namespace_value_uri"))){
+                    NamespaceInstance sci = sci_list.get(rs.getString("namespace_value_uri"));
+                    sci = sci == null ? new NamespaceInstance() : sci;
+                    sci_list.put(rs.getString("namespace_value_uri"), sci);
 
-                    sci.schema_value_uri = rs.getString("schema_value_uri");
-                    sci.isProperty = rs.getBoolean("schema_value_type");
-                    schema.instances.add(sci);
+                    sci.namespace_value_uri = rs.getString("namespace_value_uri");
+                    sci.isProperty = rs.getBoolean("namespace_value_type");
+                    namespace.instances.add(sci);
                 }
 
-                Map<Integer, Map<String, String>> sub_schi_log = schema.schema_instance_crawl_logs.get(rs.getInt("crawl_id"));
+                Map<Integer, Map<String, String>> sub_schi_log = namespace.namespace_instance_crawl_logs.get(rs.getInt("crawl_id"));
                 sub_schi_log = sub_schi_log == null ? new HashMap<Integer, Map<String, String>>() : sub_schi_log;
-                schema.schema_instance_crawl_logs.put(rs.getInt("crawl_id"), sub_schi_log);
+                namespace.namespace_instance_crawl_logs.put(rs.getInt("crawl_id"), sub_schi_log);
 
                 Map<String, String> dataset_schi_log = sub_schi_log.get(dataset.id);
                 dataset_schi_log = dataset_schi_log == null ? new HashMap<String, String>() : dataset_schi_log;
                 sub_schi_log.put(dataset.id, dataset_schi_log);
 
-                dataset_schi_log.put(rs.getString("schema_value_uri"), rs.getString("log_type"));
+                dataset_schi_log.put(rs.getString("namespace_value_uri"), rs.getString("log_type"));
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadDatasetSchemaURI", "success while loading namespaces URIs for dataset: " + dataset.dataset_id_datahub, crawl_log_global, conn);
-            return schemas;
+            return namespaces;
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetSchemaURI", "exception while loading namespaces URIs  for dataset: " + dataset.dataset_id_datahub + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -1409,7 +1408,7 @@ public class CrawlOperations {
     }
 
     /**
-     * Loads existing resource types with their specific schemas.
+     * Loads existing resource types with their specific namespaces.
      *
      * @return
      */
@@ -1417,7 +1416,7 @@ public class CrawlOperations {
         Map<String, ResourceType> existing_resource_types = new TreeMap<String, ResourceType>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.schema_id, sc.schema_uri FROM resource_types rt, namespaces sc WHERE rt.schema_id = sc.schema_id ");
+            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.namespace_id, sc.namespace_uri FROM resource_types rt, namespaces sc WHERE rt.namespace_id = sc.namespace_id ");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
@@ -1427,8 +1426,8 @@ public class CrawlOperations {
 
                 resource_type.resource_type_id = rs.getInt("type_id");
                 resource_type.type_uri = rs.getString("type_uri");
-                resource_type.schema.schema_id = rs.getInt("schema_id");
-                resource_type.schema.schema_uri = rs.getString("schema_uri");
+                resource_type.namespace.namespace_id = rs.getInt("namespace_id");
+                resource_type.namespace.namespace_uri = rs.getString("namespace_uri");
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadExistingResourceTypeURI", "success while loading resource types", crawl_log_global, conn);
             return existing_resource_types;
@@ -1441,7 +1440,7 @@ public class CrawlOperations {
 
     /**
      * Loads the set of resource types that are part of a dataset through their
-     * corresponding schemas registered at the table dataset_schemas.
+     * corresponding namespaces registered at the table dataset_namespaces.
      *
      * @param dataset
      * @return
@@ -1450,9 +1449,9 @@ public class CrawlOperations {
         Map<String, ResourceType> dataset_resource_types = new TreeMap<String, ResourceType>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.schema_id, sc.schema_uri "
+            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.namespace_id, sc.namespace_uri "
                     + "FROM resource_types rt, namespaces sc, dataset_namespaces ds "
-                    + "WHERE rt.schema_id = sc.schema_id AND ds.schema_id = sc.schema_id AND ds.dataset_id=?");
+                    + "WHERE rt.namespace_id = sc.namespace_id AND ds.namespace_id = sc.namespace_id AND ds.dataset_id=?");
             pst.setInt(1, dataset.id);
 
             ResultSet rs = pst.executeQuery();
@@ -1463,8 +1462,8 @@ public class CrawlOperations {
 
                 resource_type.resource_type_id = rs.getInt("type_id");
                 resource_type.type_uri = rs.getString("type_uri");
-                resource_type.schema.schema_id = rs.getInt("schema_id");
-                resource_type.schema.schema_uri = rs.getString("schema_uri");
+                resource_type.namespace.namespace_id = rs.getInt("namespace_id");
+                resource_type.namespace.namespace_uri = rs.getString("namespace_uri");
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadDatasetResourceTypes", "success while loading resource types for dataset: " + dataset.dataset_id_datahub, crawl_log_global, conn);
             return dataset_resource_types;

@@ -57,9 +57,9 @@ public class DataCrawler {
     }
 
     /**
-     * Extracts the schemas from a specific dataset. As there is no automatic
+     * Extracts the namespaces from a specific dataset. As there is no automatic
      * way on doing that we first extract the types, and later on from the types
-     * we parse and extract the base_uri of the schema. For example,
+     * we parse and extract the base_uri of the namespace. For example,
      * http://xmlns.com/foaf/0.1/OnlineAccount is parsed to
      * http://xmlns.com/foaf/0.1.
      *
@@ -67,8 +67,8 @@ public class DataCrawler {
      * @param timeout
      * @return
      */
-    public Map<String, Schema> extractDatasetNamespaces(Dataset dataset, long timeout) {
-        Map<String, Schema> schemas = new HashMap<String, Schema>();
+    public Map<String, Namespaces> extractDatasetNamespaces(Dataset dataset, long timeout) {
+        Map<String, Namespaces> schemas = new HashMap<String, Namespaces>();
         String querystr = " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> SELECT DISTINCT ?type WHERE {[] rdf:type ?type}";
         try {
             QueryEngineHTTP qt = new QueryEngineHTTP(dataset.url, querystr);
@@ -82,21 +82,21 @@ public class DataCrawler {
                 String type_uri = qs.get("?type").toString();
                 String namespace = Properties.getBaseURI(type_uri);
 
-                Schema schema = schemas.get(namespace);
-                schema = schema == null ? new Schema() : schema;
+                Namespaces schema = schemas.get(namespace);
+                schema = schema == null ? new Namespaces() : schema;
                 schemas.put(namespace, schema);
 
-                schema.schema_uri = namespace;
-                SchemaInstance schema_inst = new SchemaInstance();
+                schema.namespace_uri = namespace;
+                NamespaceInstance schema_inst = new NamespaceInstance();
                 schema_inst.isProperty = false;
-                schema_inst.schema_value_uri = type_uri;
+                schema_inst.namespace_value_uri = type_uri;
                 schema.instances.add(schema_inst);
             }
             qt.close();
 
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "extractDatasetNamespaces", "success extracting schemas from dataset " + dataset.dataset_id_datahub, crawl_log_global, mysql_connection);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "extractDatasetNamespaces", "success extracting namespaces from dataset " + dataset.dataset_id_datahub, crawl_log_global, mysql_connection);
         } catch (Exception e) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "extractDatasetNamespaces", "exception extracting schemas from dataset " + dataset.dataset_id_datahub + "\n" + e.getMessage(), crawl_log_global, mysql_connection);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "extractDatasetNamespaces", "exception extracting namespaces from dataset " + dataset.dataset_id_datahub + "\n" + e.getMessage(), crawl_log_global, mysql_connection);
         }
         return schemas;
     }
@@ -124,7 +124,7 @@ public class DataCrawler {
                 resource_type.type_uri = qs.get("?type").toString();
 
                 String schema_base_uri = Properties.getBaseURI(resource_type.type_uri);
-                resource_type.schema = co.loadSchema(schema_base_uri);
+                resource_type.namespace = co.loadSchema(schema_base_uri);
 
                 types.put(resource_type.type_uri, resource_type);
             }

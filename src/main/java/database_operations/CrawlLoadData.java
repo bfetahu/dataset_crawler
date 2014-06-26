@@ -34,8 +34,7 @@ public class CrawlLoadData {
 
         try {
             pst = conn.prepareStatement("SELECT d.dataset_id, d.dataset_name, d.dataset_id_datahub, d.dataset_url, da.is_available, da.crawl_id " +
-                    "FROM dataset d, dataset_availability da " +
-                    "WHERE d.dataset_id=? AND d.dataset_id=da.dataset_id AND da.crawl_id BETWEEN ? AND ?");
+                    "FROM dataset d, dataset_availability da WHERE d.dataset_id=? AND d.dataset_id=da.dataset_id AND da.crawl_id BETWEEN ? AND ?");
 
             pst.setInt(1, dataset.id);
             pst.setInt(2, crawl_a.crawl_id);
@@ -56,7 +55,7 @@ public class CrawlLoadData {
     }
 
     /**
-     * Loads the dataset schemas and their corresponding associations.
+     * Loads the dataset namespaces and their corresponding associations.
      *
      * @param dataset
      * @param crawl_a
@@ -67,10 +66,10 @@ public class CrawlLoadData {
         PreparedStatement pst = null;
 
         try {
-            pst = conn.prepareStatement("SELECT c.crawl_id, s.schema_id, s.schema_uri, dsl.log_type AS dataset_schema_log FROM " +
+            pst = conn.prepareStatement("SELECT c.crawl_id, s.schema_id, s.namespace_uri, dsl.log_type AS dataset_schema_log FROM " +
                     "dataset_namespaces ds, dataset d, namespaces s, dataset_namespaces_log dsl, ld_dataset_crawler.crawl_log c " +
-                    "WHERE ds.dataset_id = d.dataset_id AND ds.schema_id = s.schema_id AND " +
-                    "dsl.dataset_id = d.dataset_id AND dsl.schema_id = s.schema_id AND dsl.crawl_id = c.crawl_id AND " +
+                    "WHERE ds.dataset_id = d.dataset_id AND ds.namespace_id = s.schema_id AND " +
+                    "dsl.dataset_id = d.dataset_id AND dsl.namespace_id = s.schema_id AND dsl.crawl_id = c.crawl_id AND " +
                     "d.dataset_id = ? AND c.crawl_id BETWEEN ? AND ?");
 
             pst.setInt(1, dataset.id);
@@ -79,16 +78,16 @@ public class CrawlLoadData {
 
             ResultSet rst = pst.executeQuery();
             while (rst.next()) {
-                Schema schema = dataset.schemas.get(rst.getString("schema_uri"));
-                schema = schema == null ? new Schema() : schema;
-                dataset.schemas.put(rst.getString("schema_uri"), schema);
+                Namespaces schema = dataset.namespaces.get(rst.getString("namespace_uri"));
+                schema = schema == null ? new Namespaces() : schema;
+                dataset.namespaces.put(rst.getString("namespace_uri"), schema);
 
-                schema.schema_id = rst.getInt("schema_id");
-                schema.schema_uri = rst.getString("schema_uri");
+                schema.namespace_id = rst.getInt("namespace_id");
+                schema.namespace_uri = rst.getString("namespace_uri");
 
-                Map<Integer, String> sub_schema_logs = schema.schema_crawl_logs.get(rst.getInt("crawl_id"));
+                Map<Integer, String> sub_schema_logs = schema.namespace_crawl_logs.get(rst.getInt("crawl_id"));
                 sub_schema_logs = sub_schema_logs == null ? new HashMap<Integer, String>() : sub_schema_logs;
-                schema.schema_crawl_logs.put(rst.getInt("crawl_id"), sub_schema_logs);
+                schema.namespace_crawl_logs.put(rst.getInt("crawl_id"), sub_schema_logs);
 
                 sub_schema_logs.put(dataset.id, rst.getString("log_type"));
             }
@@ -109,9 +108,9 @@ public class CrawlLoadData {
         PreparedStatement pst = null;
 
         try {
-            pst = conn.prepareStatement("SELECT c.crawl_id, rt.type_id, rt.type_uri, s.schema_uri " +
+            pst = conn.prepareStatement("SELECT c.crawl_id, rt.type_id, rt.type_uri, s.namespace_uri " +
                     "FROM crawl_log c, dataset d, resource_types rt, resource_type_log rtl, namespaces s, dataset_namespaces ds " +
-                    "WHERE c.crawl_id = rtl.crawl_id AND ds.schema_id = s.schema_id AND rt.schema_id = s.schema_id AND " +
+                    "WHERE c.crawl_id = rtl.crawl_id AND ds.namespace_id = s.schema_id AND rt.namespace_id = s.schema_id AND " +
                     "rt.type_id = rtl.type_id AND ds.dataset_id = ? AND c.crawl_id BETWEEN ? AND ? ");
 
             pst.setInt(1, dataset.id);
@@ -126,7 +125,7 @@ public class CrawlLoadData {
 
                 resource_type.resource_type_id = rst.getInt("type_id");
                 resource_type.type_uri = rst.getString("type_uri");
-                resource_type.schema = dataset.schemas.get(rst.getString("schema_uri"));
+                resource_type.namespace = dataset.namespaces.get(rst.getString("namespace_uri"));
             }
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetResourceTypes", "exception reading the full the dataset namespaces for" + dataset.id + "\n " + ex.getMessage(), null, conn);
@@ -171,7 +170,7 @@ public class CrawlLoadData {
                 sub_resource_type_log.put(rst.getInt("type_id"), rst.getString("resource_instance_type_log"));
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetResourceTypes", "exception reading the full the dataset schemas for" + dataset.id + "\n " + ex.getMessage(), null, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetResourceTypes", "exception reading the full the dataset namespaces for" + dataset.id + "\n " + ex.getMessage(), null, conn);
         }
     }
 
@@ -225,7 +224,7 @@ public class CrawlLoadData {
                 }
             }
         } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetResourceTypes", "exception reading the full the dataset schemas for" + dataset.id + "\n " + ex.getMessage(), null, conn);
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetResourceTypes", "exception reading the full the dataset namespaces for" + dataset.id + "\n " + ex.getMessage(), null, conn);
         }
     }
 

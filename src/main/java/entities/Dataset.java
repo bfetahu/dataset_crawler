@@ -29,7 +29,7 @@ public class Dataset implements Serializable {
     
     public Map<String, ResourceType> types;    
     public Map<String, Resource> resources;
-    public Map<String, Schema> schemas;
+    public Map<String, Namespaces> namespaces;
     public Map<Integer, Boolean> dataset_crawl_availability;
 
     public Dataset() {
@@ -38,7 +38,7 @@ public class Dataset implements Serializable {
 
         types = new HashMap<String, ResourceType>();
         resources = new HashMap<String, Resource>();
-        schemas = new HashMap<String, Schema>();
+        namespaces = new HashMap<String, Namespaces>();
         dataset_crawl_availability = new HashMap<Integer, Boolean>();
     }
 

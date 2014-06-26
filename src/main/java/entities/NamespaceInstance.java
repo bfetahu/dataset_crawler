@@ -8,9 +8,9 @@ package entities;
  *
  * @author besnik
  */
-public class SchemaInstance{
-    public String schema_value_uri;
-    public String schema_value_description;
+public class NamespaceInstance {
+    public String namespace_value_uri;
+    public String namespace_value_description;
     
     public boolean isProperty;
 }

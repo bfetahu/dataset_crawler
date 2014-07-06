@@ -720,6 +720,40 @@ public class CrawlOperations {
     }
 
     /**
+     * Writes the log of changes for each resource instance and the corresponding associated resource types at the different logs.
+     *
+     * @param resource
+     */
+    public void writeResourceInstanceTypeLog(Map<Integer, Resource> existing_resources) {
+        PreparedStatement pst = null;
+        try {
+            pst = conn.prepareStatement("INSERT INTO resource_instance_type_log(resource_id,type_id,log_type,crawl_id) VALUES(?,?,?,?)");
+
+            for (int resource_id : existing_resources.keySet()) {
+                Resource resource = existing_resources.get(resource_id);
+
+                for (int crawl_log : resource.resource_type_log.keySet()) {
+                    for (int resource_type_id : resource.resource_type_log.get(crawl_log).keySet()) {
+                        String log_type = resource.resource_type_log.get(crawl_log).get(resource_type_id);
+
+                        pst.setInt(1, resource.resource_id);
+                        pst.setInt(2, resource_type_id);
+                        pst.setString(3, log_type);
+                        pst.setInt(4, crawl_log);
+
+                        pst.addBatch();
+                    }
+                }
+            }
+
+            int[] rst = pst.executeBatch();
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceTypeLog", "success writing resource instance type logs", crawl_log_global, conn);
+        } catch (Exception ex) {
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceTypeLog", "exception writing resource instances type logs: " + "\n" + ex.getMessage(), crawl_log_global, conn);
+        }
+    }
+
+    /**
      * Write the resource instance logs for a specific dataset.
      *
      * @param dataset
@@ -865,6 +899,39 @@ public class CrawlOperations {
      *
      * @param resource
      */
+    public void writeResourceInstanceValues(Set<Integer> updated_resources, Map<Integer, Resource> resources) {
+        PreparedStatement pst = null;
+        try {
+            pst = conn.prepareStatement("INSERT INTO resource_values(resource_id,property_uri,value) VALUES(?,?,?)");
+
+            for (int resource_id : updated_resources) {
+                Resource resource = resources.get(resource_id);
+                for (ResourceValue resource_value : resource.values) {
+                    if (resource_value.isValid) {
+                        pst.setInt(1, resource_id);
+                        pst.setString(2, resource_value.datatype_property);
+                        pst.setString(3, resource_value.value);
+
+                        pst.addBatch();
+                    }
+                }
+            }
+
+            int[] rst = pst.executeBatch();
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValues", "error writing resource instance values", crawl_log_global, conn);
+        } catch (Exception ex) {
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValues", "exception writing resource instances values: " + "\n" + ex.getMessage(), crawl_log_global, conn);
+        }
+
+    }
+
+    /**
+     * Writes the resource values for all resource instances for a particular
+     * dataset.
+     *
+     * @param resource
+     */
     public void writeResourceInstanceValues(Resource resource) {
         PreparedStatement pst = null;
         try {
@@ -997,7 +1064,7 @@ public class CrawlOperations {
         PreparedStatement pst = null;
         try {
             pst = conn.prepareStatement("SELECT d.dataset_id, d.dataset_name, d.dataset_description, d.dataset_url, d.dataset_id_datahub, ds.namespace_id, sc.namespace_uri "
-                    + "FROM dataset_namespaces ds, dataset d, namespaces sc WHERE ds.dataset_id = d.dataset_id AND sc.namespace_id = ds.namespace_id;");
+                    + "FROM dataset_namespaces ds, dataset d, namespace sc WHERE ds.dataset_id = d.dataset_id AND sc.namespace_id = ds.namespace_id;");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
@@ -1039,7 +1106,7 @@ public class CrawlOperations {
         try {
             pst = conn.prepareStatement("SELECT sc.namespace_id, sc.namespace_uri, sci.namespace_value_uri, sci.namespace_value_type, "
                     + "scl.log_type, c.crawl_id, scl.dataset_id, dscl.log_type as dataset_namespace_log_type "
-                    + "FROM namespaces sc, namespaces_instances sci, namespaces_log scl, dataset_namespaces_log dscl, dataset d, crawl_log c "
+                    + "FROM namespace sc, namespaces_instances sci, namespaces_log scl, dataset_namespaces_log dscl, dataset d, crawl_log c "
                     + "WHERE sc.namespace_id = sci.namespace_id AND sc.namespace_id = scl.namespace_id "
                     + "AND sci.namespace_value_uri = scl.namespace_value_uri AND sc.namespace_id = dscl.namespace_id "
                     + "AND d.dataset_id = dscl.dataset_id AND c.crawl_id = dscl.crawl_id AND scl.crawl_id = c.crawl_id");
@@ -1197,7 +1264,7 @@ public class CrawlOperations {
     public Namespaces loadSchema(String namespace_uri) {
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT namespace_id FROM namespaces WHERE namespace_uri = ?");
+            pst = conn.prepareStatement("SELECT namespace_id FROM namespace WHERE namespace_uri = ?");
             pst.setString(1, namespace_uri);
 
             ResultSet rs = pst.executeQuery();
@@ -1226,7 +1293,7 @@ public class CrawlOperations {
         PreparedStatement pst = null;
         try {
             pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, rt.namespace_id, sc.namespace_uri, rtl.resource_id, rtl.log_type, rtl.crawl_id, ri.dataset_id "
-                    + "FROM resource_types rt, resource_type_log rtl, resource_instances ri, namespaces sc "
+                    + "FROM resource_types rt, resource_type_log rtl, resource_instances ri, namespace sc "
                     + "WHERE rt.type_id = rtl.type_id AND rtl.resource_id = ri.resource_id AND sc.namespace_id = rt.namespace_id;");
 
             ResultSet rs = pst.executeQuery();
@@ -1339,7 +1406,7 @@ public class CrawlOperations {
         Set<String> namespaces = new HashSet<String>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT sc.namespace_uri FROM namespaces");
+            pst = conn.prepareStatement("SELECT namespace_uri FROM namespace");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
@@ -1367,7 +1434,7 @@ public class CrawlOperations {
         PreparedStatement pst = null;
         try {
             pst = conn.prepareStatement("SELECT ds.namespace_id, sc.namespace_uri, sci.namespace_value_uri, sci.namespace_value_type, scil.log_type, scil.crawl_id, scil.dataset_id " +
-                    "FROM dataset_namespaces ds, namespaces sc, namespaces_instances sci, namespaces_instance_log scil " +
+                    "FROM dataset_namespaces ds, namespace sc, namespaces_instances sci, namespaces_instance_log scil " +
                     "WHERE ds.namespace_id = sc.namespace_id AND sc.namespace_id=sci.namespace_id AND sci.namespace_id = scil.namespace_id AND ds.dataset_id=?;");
             pst.setInt(1, dataset.id);
 
@@ -1417,7 +1484,7 @@ public class CrawlOperations {
         Map<String, ResourceType> existing_resource_types = new TreeMap<String, ResourceType>();
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.namespace_id, sc.namespace_uri FROM resource_types rt, namespaces sc WHERE rt.namespace_id = sc.namespace_id ");
+            pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.namespace_id, sc.namespace_uri FROM resource_types rt, namespace sc WHERE rt.namespace_id = sc.namespace_id ");
 
             ResultSet rs = pst.executeQuery();
             while (rs.next()) {
@@ -1451,7 +1518,7 @@ public class CrawlOperations {
         PreparedStatement pst = null;
         try {
             pst = conn.prepareStatement("SELECT rt.type_id, rt.type_uri, sc.namespace_id, sc.namespace_uri "
-                    + "FROM resource_types rt, namespaces sc, dataset_namespaces ds WHERE rt.namespace_id = sc.namespace_id AND ds.namespace_id = sc.namespace_id AND ds.dataset_id=?");
+                    + "FROM resource_types rt, namespace sc, dataset_namespaces ds WHERE rt.namespace_id = sc.namespace_id AND ds.namespace_id = sc.namespace_id AND ds.dataset_id=?");
             pst.setInt(1, dataset.id);
 
             ResultSet rs = pst.executeQuery();
@@ -1655,7 +1722,7 @@ public class CrawlOperations {
         return null;
     }
 
-    public void updateCrawlSetup(int crawl_setup_id){
+    public void updateCrawlSetup(int crawl_setup_id) {
         PreparedStatement pst = null;
         try {
             pst = conn.prepareStatement("UPDATE crawl_setups SET is_completed=1 WHERE setup_id=?");

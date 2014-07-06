@@ -122,9 +122,9 @@ public class IncrementalDatasetCrawler {
         String[] datasets_groups = datasets_str.split("\n");
         List<Dataset> datasets = new ArrayList<Dataset>();
 
-        for(String dataset_line:datasets_groups){
+        for (String dataset_line : datasets_groups) {
             String[] tmp = dataset_line.split("\t");
-            if(tmp.length < 3){
+            if (tmp.length < 3) {
                 System.out.println(dataset_line);
                 continue;
             }
@@ -177,6 +177,10 @@ public class IncrementalDatasetCrawler {
         }
     }
 
+    public void updateCrawlSetup(int crawl_setupid) {
+        co.updateCrawlSetup(crawl_setupid);
+    }
+
     /**
      * Extracts and writes the associated namespaces with a dataset.
      *
@@ -199,7 +203,13 @@ public class IncrementalDatasetCrawler {
             }
 
             //log the crawled namespaces for the respective datasets
-            if (dataset_existing_schemas == null || !dataset_existing_schemas.values().contains(schema.namespace_uri)) {
+            if (dataset_existing_schemas == null) {
+                for (int namespace_id : dataset_existing_schemas.keySet()) {
+                    if (dataset_existing_schemas.get(namespace_id).namespace_uri.equals(schema.namespace_uri)) {
+                        schema.namespace_id = namespace_id;
+                        break;
+                    }
+                }
                 co.writeDatasetSchemas(dataset, schema);
 
                 //store the dataset namespace logs. Create the new namespace objects with namespace_id, namespace_uri and the corresponding crawl_id and dataset_id\F
@@ -605,12 +615,12 @@ public class IncrementalDatasetCrawler {
                 //check whether there is any value that has changed. compare the two sets of values
                 boolean hasResourceChanged = compareResourceValues(resource, live_resource);
 
-                if (hasResourceChanged) {
-                    //those have a false flag are considered as deleted.
-                    //flag those that dont have a matching value as deleted.
-                    co.writeResourceInstanceValues(resource);
-                    co.writeResourceInstanceValuesLog(resource, crawl_log);
-                }
+//                if (hasResourceChanged) {
+//                    //those have a false flag are considered as deleted.
+//                    //flag those that dont have a matching value as deleted.
+//                    co.writeResourceInstanceValues(resource);
+//                    co.writeResourceInstanceValuesLog(resource, crawl_log);
+//                }
 
             } //otherwise compare the values of the resource instance 
             else {
@@ -624,11 +634,11 @@ public class IncrementalDatasetCrawler {
                     updated_resource_value_uri.add(resource.resource_id);
                     //compare the two sets of values
                     boolean hasResourceChanged = compareResourceValues(resource, live_resource);
-                    if (hasResourceChanged) {
-                        //flag those that dont have a matching value as deleted.
-                        co.writeResourceInstanceValues(resource);
-                        co.writeResourceInstanceValuesLog(resource, crawl_log);
-                    }
+//                    if (hasResourceChanged) {
+//                        //flag those that dont have a matching value as deleted.
+//                        co.writeResourceInstanceValues(resource);
+//                        co.writeResourceInstanceValuesLog(resource, crawl_log);
+//                    }
                 }
             }
 
@@ -654,8 +664,13 @@ public class IncrementalDatasetCrawler {
                     sub_res_type_instance.add(live_resource.types.get(resource_type_uri).resource_type_id);
                 }
             }
-            co.writeResourceInstanceTypeLog(resource);
         }
+
+        //write the updated values and resources
+        co.writeResourceInstanceValues(updated_resource_value_uri, existing_resources);
+
+        //write the resource instance type logs
+        co.writeResourceInstanceTypeLog(existing_resources);
 
         //write the resource instance and type associations
         co.writeDatasetResourceInstanceType(res_type_instances);

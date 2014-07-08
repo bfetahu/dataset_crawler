@@ -37,10 +37,13 @@ public class CrawlOperations {
         PreparedStatement pst = null;
 
         try {
+            boolean is_update = false;
             Entry<Integer, Boolean> dataset_entry = isDatasetMetadataUpdated(dataset);
             if (dataset_entry.getKey() != -1 && !dataset_entry.getValue()) {
                 pst = conn.prepareStatement("UPDATE dataset SET dataset_name=?, dataset_description=?, dataset_url=? WHERE dataset_id_datahub=? AND dataset_id=" + dataset_entry.getKey());
                 dataset.id = dataset_entry.getKey();
+
+                is_update = true;
             } else {
                 pst = conn.prepareStatement("INSERT INTO dataset(dataset_name,dataset_description,dataset_url,dataset_id_datahub) VALUES(?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
             }
@@ -52,17 +55,21 @@ public class CrawlOperations {
 
             int rst = pst.executeUpdate();
             //get the generated auto increment keys.
-            ResultSet rs_keys = pst.getGeneratedKeys();
+            if (!is_update) {
+                ResultSet rs_keys = pst.getGeneratedKeys();
 
-            if (rst != 0) {
-                if (dataset.id == 0) {
-                    if (rs_keys.next()) {
-                        dataset.id = rs_keys.getInt(1);
+                if (rst != 0) {
+                    if (dataset.id == 0) {
+                        if (rs_keys.next()) {
+                            dataset.id = rs_keys.getInt(1);
+                        }
                     }
+                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetMetadata", "sucssess writing metadata for" + dataset.id, crawl_log_global, conn);
+                } else {
+                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetMetadata", "error writing metadata for" + dataset.id, crawl_log_global, conn);
                 }
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDataset", "sucssess writing metadata for" + dataset.id, crawl_log_global, conn);
             } else {
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDataset", "error writing metadata for" + dataset.id, crawl_log_global, conn);
+                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetMetadata", "sucssess updating metadata for" + dataset.id, crawl_log_global, conn);
             }
             return rst != 0;
         } catch (Exception ex) {
@@ -134,39 +141,6 @@ public class CrawlOperations {
         }
     }
 
-    /**
-     * Writes the availability of the datasets' endpoints.
-     *
-     * @param dataset_availability
-     */
-    public void writeDatasetEndpointAvailability(Map<String, Entry<Dataset, Boolean>> dataset_availability, int crawl_id) {
-        PreparedStatement pst = null;
-        try {
-            pst = conn.prepareStatement("INSERT INTO dataset_availability(crawl_id,dataset_id,isAvailable) VALUES(?,?,?)");
-            for (String dataset_id_datahub : dataset_availability.keySet()) {
-                Entry<Dataset, Boolean> dataset_entry = dataset_availability.get(dataset_id_datahub);
-
-                pst.setInt(1, crawl_id);
-                pst.setInt(2, dataset_entry.getKey().id);
-                pst.setBoolean(3, dataset_entry.getValue());
-
-                pst.addBatch();
-            }
-
-            int[] rst = pst.executeBatch();
-
-            for (int i = 0; i < rst.length; i++) {
-                String dataset_id_datahub = dataset_availability.keySet().toArray()[i].toString();
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetEndpointAvailability", "sucssess writing endpoint availability for dataset " + dataset_id_datahub, crawl_log_global, conn);
-                } else {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetEndpointAvailability", "error writing endpoint availability  for dataset " + dataset_id_datahub, crawl_log_global, conn);
-                }
-            }
-        } catch (Exception ex) {
-            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "writeDatasetEndpointAvailability", "exception writing endpoint availability\n " + ex.getMessage(), crawl_log_global, conn);
-        }
-    }
 
     /**
      * Writes the availability of the datasets' endpoints.
@@ -378,7 +352,7 @@ public class CrawlOperations {
     public void writeSchema(Namespaces namespace) {
         PreparedStatement pst = null;
         try {
-            pst = conn.prepareStatement("INSERT INTO namespaces(namespace_uri) VALUES(?)", Statement.RETURN_GENERATED_KEYS);
+            pst = conn.prepareStatement("INSERT INTO namespace(namespace_uri) VALUES(?)", Statement.RETURN_GENERATED_KEYS);
             pst.setString(1, namespace.namespace_uri);
 
             int rst = pst.executeUpdate();
@@ -494,8 +468,6 @@ public class CrawlOperations {
                     rs_keys.next();
                     resource.resource_id = rs_keys.getInt(1);
 
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstances", "success writing resource instance: " + resource.resource_uri, crawl_log_global, conn);
-
                     //if added successfully, add the corresponding resource types for the resource instance
                     //add the resource types for the resource instance
                     writeResourceInstanceType(resource);
@@ -503,6 +475,8 @@ public class CrawlOperations {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstances", "error writing resource instance: " + resource.resource_uri, crawl_log_global, conn);
                 }
             }
+            //if there is no error write that the operation was carried successfully.
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstances", "success writing resource instances", crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstances", "exception writing resource instances: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -528,14 +502,11 @@ public class CrawlOperations {
             if (rst != 0) {
                 rs_keys.next();
                 resource.resource_id = rs_keys.getInt(1);
-                CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstances", "success writing resource instance: " + resource.resource_uri, crawl_log_global, conn);
-
                 //add the resource types for the resource instance
                 writeResourceInstanceType(resource);
             } else {
                 CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstances", "error writing resource instance: " + resource.resource_uri, crawl_log_global, conn);
             }
-
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstances", "exception writing resource instances: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -565,12 +536,11 @@ public class CrawlOperations {
             for (int i = 0; i < rst.length; i++) {
                 ResourceType res_type = (ResourceType) res_type_array[i];
 
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceType", "success writing resource instance types: " + resource.resource_uri + " and resource type: " + res_type.type_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceType", "error writing resource instance types: " + resource.resource_uri + " and resource type: " + res_type.type_uri, crawl_log_global, conn);
                 }
             }
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceType", "success writing resource instance and resource type mapping.", crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceType", "exception writing resource instances types: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -592,18 +562,17 @@ public class CrawlOperations {
                     pst.setInt(2, type_id);
                     pst.addBatch();
                 }
-
             }
 
             int[] rst = pst.executeBatch();
             Object[] res_type_array = res_type_instances.keySet().toArray();
             for (int i = 0; i < rst.length; i++) {
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetResourceInstanceType", "success writing resource instance types: " + res_type_array[i], crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetResourceInstanceType", "error writing resource instance types: " + res_type_array[i], crawl_log_global, conn);
                 }
             }
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetResourceInstanceType", "success writing resource instance types", crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetResourceInstanceType", "exception writing resource instances types: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -631,12 +600,11 @@ public class CrawlOperations {
             for (int i = 0; i < rst.length; i++) {
                 Resource resource = (Resource) res_type_array[i];
 
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetResourceInstanceType", "success writing resource instance types: " + resource.resource_uri + " and resource type: " + type.type_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetResourceInstanceType", "error writing resource instance types: " + resource.resource_uri + " and resource type: " + type.type_uri, crawl_log_global, conn);
                 }
             }
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetResourceInstanceType", "success writing resource instance and resource type: " + type.type_uri, crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetResourceInstanceType", "exception writing resource instances types: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -671,12 +639,12 @@ public class CrawlOperations {
             int[] rst = pst.executeBatch();
 
             for (int i = 0; i < rst.length; i++) {
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetResourceInstanceTypeLog", "success writing resource instance type logs" + type.type_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetResourceInstanceTypeLog", "error writing resource instance type logs " + type.type_uri, crawl_log_global, conn);
                 }
             }
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeDatasetResourceInstanceTypeLog", "success writing resource instance type logs" + type.type_uri, crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeDatasetResourceInstanceTypeLog", "exception writing resource instances type logs: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -708,12 +676,11 @@ public class CrawlOperations {
             int[] rst = pst.executeBatch();
 
             for (int i = 0; i < rst.length; i++) {
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceTypeLog", "success writing resource instance type logs: " + resource.resource_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceTypeLog", "error writing resource instance type  logs: " + resource.resource_uri, crawl_log_global, conn);
                 }
             }
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceTypeLog", "success writing resource instance type logs: " + resource.resource_uri, crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceTypeLog", "exception writing resource instances type logs: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -777,12 +744,12 @@ public class CrawlOperations {
             Object[] res_uri_arr = dataset.resources.keySet().toArray();
             for (int i = 0; i < rst.length; i++) {
                 Resource resource = dataset.resources.get(res_uri_arr[i].toString());
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceLogs", "success writing resource instance logs: " + resource.resource_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceLogs", "error writing resource instance logs: " + resource.resource_uri, crawl_log_global, conn);
                 }
             }
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceLogs", "success writing resource instance logs", crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceLogs", "exception writing resource instances logs: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -808,9 +775,7 @@ public class CrawlOperations {
 
             int[] rst = pst.executeBatch();
             for (int i = 0; i < rst.length; i++) {
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceLogs", "success writing resource instance logs: " + resource.resource_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceLogs", "error writing resource instance logs: " + resource.resource_uri, crawl_log_global, conn);
                 }
             }
@@ -841,12 +806,11 @@ public class CrawlOperations {
             int[] rst = pst.executeBatch();
             Object[] res_uri_arr = resource_instance_logs.keySet().toArray();
             for (int i = 0; i < rst.length; i++) {
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceLogs", "success writing resource instance logs: " + res_uri_arr[i], crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceLogs", "error writing resource instance logs: " + res_uri_arr[i], crawl_log_global, conn);
                 }
             }
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceLogs", "success writing resource instance logs", crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceLogs", "exception writing resource instances logs: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -881,13 +845,14 @@ public class CrawlOperations {
                     if (rst[i] != 0) {
                         rs_keys.next();
                         resource_value.resource_value_id = rs_keys.getInt(1);
-
-                        CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValues", "success writing resource instance values: " + resource.resource_uri, crawl_log_global, conn);
                     } else {
                         CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValues", "error writing resource instance values: " + resource.resource_uri, crawl_log_global, conn);
                     }
                 }
             }
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValues", "success writing resource instance values", crawl_log_global, conn);
+
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValues", "exception writing resource instances values: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -956,12 +921,12 @@ public class CrawlOperations {
                 if (rst[i] != 0) {
                     rs_keys.next();
                     resource_value.resource_value_id = rs_keys.getInt(1);
-
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValues", "success writing resource instance values: " + resource.resource_uri, crawl_log_global, conn);
                 } else {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValues", "error writing resource instance values: " + resource.resource_uri, crawl_log_global, conn);
                 }
             }
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValues", "success writing resource instance values: " + resource.resource_uri, crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValues", "exception writing resource instances values: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -994,12 +959,12 @@ public class CrawlOperations {
             Object[] res_uri_arr = dataset.resources.keySet().toArray();
             for (int i = 0; i < rst.length; i++) {
                 Resource resource = dataset.resources.get(res_uri_arr[i].toString());
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValuesLog", "success writing resource instance values log: " + resource.resource_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValuesLog", "error writing resource instance values log: " + resource.resource_uri, crawl_log_global, conn);
                 }
             }
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValuesLog", "success writing resource instance values log", crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValuesLog", "exception writing resource instances values log: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -1035,12 +1000,12 @@ public class CrawlOperations {
 
             int[] rst = pst.executeBatch();
             for (int i = 0; i < rst.length; i++) {
-                if (rst[i] != 0) {
-                    CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValuesLog", "success writing resource instance values log: " + resource.resource_uri, crawl_log_global, conn);
-                } else {
+                if (rst[i] == 0) {
                     CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValuesLog", "error writing resource instance values log: " + resource.resource_uri, crawl_log_global, conn);
                 }
             }
+
+            CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "writeResourceInstanceValuesLog", "success writing resource instance values log: " + resource.resource_uri, crawl_log_global, conn);
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.error.toString(), "writeResourceInstanceValuesLog", "exception writing resource instances values log: " + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
@@ -1467,12 +1432,11 @@ public class CrawlOperations {
                 dataset_schi_log.put(rs.getString("namespace_value_uri"), rs.getString("log_type"));
             }
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.success.toString(), "loadDatasetSchemaURI", "success while loading namespaces URIs for dataset: " + dataset.dataset_id_datahub, crawl_log_global, conn);
-            return namespaces;
         } catch (Exception ex) {
             CrawlerLogs.writeCrawlLog(Properties.crawl_log_operations.exception.toString(), "loadDatasetSchemaURI", "exception while loading namespaces URIs  for dataset: " + dataset.dataset_id_datahub + "\n" + ex.getMessage(), crawl_log_global, conn);
         }
 
-        return null;
+        return namespaces;
     }
 
     /**

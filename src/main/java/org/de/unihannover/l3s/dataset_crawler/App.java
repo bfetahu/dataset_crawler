@@ -16,8 +16,9 @@ import java.util.Map;
  */
 public class App {
     public static void main(String[] args) {
+        //String path = "C:\\Users\\besnik\\Documents\\intelliJ_workspace\\dataset_crawler\\dataset_crawler.ini";
         Properties.properties = FileUtils.readIntoStringMap(args[0], "=", false);
-
+        //Properties.properties = FileUtils.readIntoStringMap(path, "=", false);
 
         if (Properties.properties.get("run_case").equals("multiple_run")) {
             while (true) {
@@ -45,7 +46,6 @@ public class App {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-
                 }
             }
         } else {

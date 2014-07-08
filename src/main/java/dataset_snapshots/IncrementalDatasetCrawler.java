@@ -10,7 +10,6 @@ import database_operations.CrawlOperations;
 import database_operations.DatabaseConnection;
 import entities.*;
 import metadata_crawler.Metadata;
-import crawl_utils.FileUtils;
 
 import java.sql.Connection;
 import java.util.*;
@@ -123,7 +122,7 @@ public class IncrementalDatasetCrawler {
         List<Dataset> datasets = new ArrayList<Dataset>();
 
         for (String dataset_line : datasets_groups) {
-            String[] tmp = dataset_line.split("\t");
+            String[] tmp = dataset_line.split(";");
             if (tmp.length < 3) {
                 System.out.println(dataset_line);
                 continue;
@@ -203,44 +202,43 @@ public class IncrementalDatasetCrawler {
             }
 
             //log the crawled namespaces for the respective datasets
-            if (dataset_existing_schemas == null) {
-                for (int namespace_id : dataset_existing_schemas.keySet()) {
-                    if (dataset_existing_schemas.get(namespace_id).namespace_uri.equals(schema.namespace_uri)) {
-                        schema.namespace_id = namespace_id;
-                        break;
-                    }
+
+            for (int namespace_id : dataset_existing_schemas.keySet()) {
+                if (dataset_existing_schemas.get(namespace_id).namespace_uri.equals(schema.namespace_uri)) {
+                    schema.namespace_id = namespace_id;
+                    break;
                 }
-                co.writeDatasetSchemas(dataset, schema);
-
-                //store the dataset namespace logs. Create the new namespace objects with namespace_id, namespace_uri and the corresponding crawl_id and dataset_id\F
-                Namespaces schema_log = new Namespaces();
-                schema_log.namespace_id = schema.namespace_id;
-                schema_log.namespace_uri = schema.namespace_uri;
-
-                Map<Integer, String> log_types = new TreeMap<Integer, String>();
-                log_types.put(dataset.id, Properties.crawl_log_status.added.name());
-                schema_log.dataset_namespace_crawl_logs.put(crawl_log.crawl_id, log_types);
-
-                //write the changes
-                co.writeDatasetSchemasLogs(schema_log);
-
-                //write the namespace instances
-                co.writeSchemaInstances(schema);
-                //add the logs for the namespace instances : crawl_id -> dataset_id -> namespace_value_uri, log_type
-                Map<Integer, Map<String, String>> sub_schi_log = schema.namespace_instance_crawl_logs.get(crawl_log.crawl_id);
-                sub_schi_log = sub_schi_log == null ? new HashMap<Integer, Map<String, String>>() : sub_schi_log;
-                schema.namespace_instance_crawl_logs.put(crawl_log.crawl_id, sub_schi_log);
-
-                Map<String, String> dataset_schi_log = sub_schi_log.get(dataset.id);
-                dataset_schi_log = dataset_schi_log == null ? new HashMap<String, String>() : dataset_schi_log;
-                sub_schi_log.put(dataset.id, dataset_schi_log);
-
-                for (NamespaceInstance schi : schema.instances) {
-                    dataset_schi_log.put(schi.namespace_value_uri, Properties.crawl_log_status.added.name());
-                }
-
-                co.writeSchemaInstanceLogs(schema);
             }
+            co.writeDatasetSchemas(dataset, schema);
+
+            //store the dataset namespace logs. Create the new namespace objects with namespace_id, namespace_uri and the corresponding crawl_id and dataset_id\F
+            Namespaces schema_log = new Namespaces();
+            schema_log.namespace_id = schema.namespace_id;
+            schema_log.namespace_uri = schema.namespace_uri;
+
+            Map<Integer, String> log_types = new TreeMap<Integer, String>();
+            log_types.put(dataset.id, Properties.crawl_log_status.added.name());
+            schema_log.dataset_namespace_crawl_logs.put(crawl_log.crawl_id, log_types);
+
+            //write the changes
+            co.writeDatasetSchemasLogs(schema_log);
+
+            //write the namespace instances
+            co.writeSchemaInstances(schema);
+            //add the logs for the namespace instances : crawl_id -> dataset_id -> namespace_value_uri, log_type
+            Map<Integer, Map<String, String>> sub_schi_log = schema.namespace_instance_crawl_logs.get(crawl_log.crawl_id);
+            sub_schi_log = sub_schi_log == null ? new HashMap<Integer, Map<String, String>>() : sub_schi_log;
+            schema.namespace_instance_crawl_logs.put(crawl_log.crawl_id, sub_schi_log);
+
+            Map<String, String> dataset_schi_log = sub_schi_log.get(dataset.id);
+            dataset_schi_log = dataset_schi_log == null ? new HashMap<String, String>() : dataset_schi_log;
+            sub_schi_log.put(dataset.id, dataset_schi_log);
+
+            for (NamespaceInstance schi : schema.instances) {
+                dataset_schi_log.put(schi.namespace_value_uri, Properties.crawl_log_status.added.name());
+            }
+
+            co.writeSchemaInstanceLogs(schema);
         }
 
         //remove those namespaces that are still present in the dataset

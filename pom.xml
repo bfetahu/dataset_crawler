@@ -11,7 +11,7 @@
 
     <properties>
         <!-- What JDK version to use -->
-        <jdk-version>1.6</jdk-version>
+        <jdk-version>1.8</jdk-version>
         <!-- Output jar file name -->
         <jar-name>dataset_crawler</jar-name>
     </properties>
@@ -120,6 +120,11 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.semanticweb.yars</groupId>
+            <artifactId>nxparser</artifactId>
+            <version>1.2.3</version>
         </dependency>
     </dependencies>
 

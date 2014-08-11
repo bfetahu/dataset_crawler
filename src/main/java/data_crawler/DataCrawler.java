@@ -8,7 +8,7 @@ import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.engine.http.QueryEngineHTTP;
 import crawl_utils.Properties;
-import database_operations.CrawlOperations;
+import database_operations.CrawlDBOperations;
 import database_operations.CrawlerLogs;
 import entities.*;
 
@@ -108,7 +108,7 @@ public class DataCrawler {
      * @param timeout
      * @return
      */
-    public Map<String, ResourceType> loadDatasetResourceTypes(Dataset dataset, long timeout, CrawlOperations co) {
+    public Map<String, ResourceType> loadDatasetResourceTypes(Dataset dataset, long timeout, CrawlDBOperations co) {
         String querystr = " PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> SELECT DISTINCT ?type WHERE {[] rdf:type ?type}";
         try {
             Map<String, ResourceType> types = new TreeMap<String, ResourceType>();
@@ -145,7 +145,7 @@ public class DataCrawler {
      * @param timeout
      * @return
      */
-    public Map<String, Map<String, ResourceType>> loadDatasetResourceTypes(List<Dataset> lst, Set<String> dsread, long timeout, CrawlOperations co) {
+    public Map<String, Map<String, ResourceType>> loadDatasetResourceTypes(List<Dataset> lst, Set<String> dsread, long timeout, CrawlDBOperations co) {
         Map<String, Map<String, ResourceType>> rst = new HashMap<String, Map<String, ResourceType>>();
 
         for (Dataset dataset : lst) {

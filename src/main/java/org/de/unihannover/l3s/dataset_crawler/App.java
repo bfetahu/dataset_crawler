@@ -2,9 +2,14 @@ package org.de.unihannover.l3s.dataset_crawler;
 
 import crawl_utils.FileUtils;
 import crawl_utils.Properties;
+import database_operations.CrawlDBOperations;
+import database_operations.CrawlOperations;
+import database_operations.DatabaseConnection;
+import dataset_snapshots.DatasetDumpCrawler;
 import dataset_snapshots.IncrementalDatasetCrawler;
 import entities.CrawlLog;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.util.AbstractMap;
@@ -19,20 +24,23 @@ public class App {
         //String path = "C:\\Users\\besnik\\Documents\\intelliJ_workspace\\dataset_crawler\\dataset_crawler.ini";
         Properties.properties = FileUtils.readIntoStringMap(args[0], "=", false);
         //Properties.properties = FileUtils.readIntoStringMap(path, "=", false);
+        Connection mysql_connection = DatabaseConnection.getMySQLConnection(Properties.properties.get("mysql_host"), Properties.properties.get("mysql_schema"), Properties.properties.get("mysql_user"), Properties.properties.get("mysql_pwd"));
+        CrawlOperations co = new CrawlOperations(mysql_connection);
+        CrawlDBOperations co_db = new CrawlDBOperations(mysql_connection);
 
         if (Properties.properties.get("run_case").equals("multiple_run")) {
             while (true) {
                 System.out.println("Initialising and starting crawl operation...");
                 long time = System.nanoTime();
-                IncrementalDatasetCrawler inc_crawl = new IncrementalDatasetCrawler(Properties.properties);
-                Map<Integer, Map.Entry<String, String>> crawl_setups = inc_crawl.co.getActiveCrawlSetups();
+                IncrementalDatasetCrawler inc_crawl = new IncrementalDatasetCrawler(Properties.properties, mysql_connection, co_db, co);
+                Map<Integer, Map.Entry<String, String>> crawl_setups = co_db.getActiveCrawlSetups();
                 for (int setup_id : crawl_setups.keySet()) {
                     Map.Entry<String, String> entry = crawl_setups.get(setup_id);
 
                     runCrawlEntry(entry, inc_crawl);
 
                     System.out.println("Crawl was completed in " + measureComputingTime(time));
-                    inc_crawl.updateCrawlSetup(setup_id);
+                    inc_crawl.updateCrawlSetup(setup_id, co_db);
 
                     //close the connection
                     try {
@@ -48,13 +56,21 @@ public class App {
                     }
                 }
             }
-        } else {
+        } else if (Properties.properties.get("run_case").equals("single_run")){
             long time = System.nanoTime();
             System.out.println("Initialising and starting crawl operation...");
-            IncrementalDatasetCrawler inc_crawl = new IncrementalDatasetCrawler(Properties.properties);
+            IncrementalDatasetCrawler inc_crawl = new IncrementalDatasetCrawler(Properties.properties, mysql_connection, co_db, co);
             String datasets_file = FileUtils.readText(Properties.properties.get("datasets_path"));
             Map.Entry<String, String> crawl_setup = new AbstractMap.SimpleEntry<String, String>(datasets_file, Properties.properties.get("crawl_description"));
             runCrawlEntry(crawl_setup, inc_crawl);
+            System.out.println("Crawl was completed in " + measureComputingTime(time));
+        } else if(Properties.properties.get("run_case").equals("dump_run")){
+            long time = System.nanoTime();
+            System.out.println("Initialising and starting crawl operation...");
+            DatasetDumpCrawler dump_crawl = new DatasetDumpCrawler(Properties.properties.get("dump_location"), mysql_connection, co, co_db);
+            String datasets_file = FileUtils.readText(Properties.properties.get("datasets_path"));
+            Map.Entry<String, String> crawl_setup = new AbstractMap.SimpleEntry<String, String>(datasets_file, Properties.properties.get("crawl_description"));
+            runDumpCrawlEntry(crawl_setup, dump_crawl, crawl_setup.getKey());
             System.out.println("Crawl was completed in " + measureComputingTime(time));
         }
     }
@@ -76,6 +92,23 @@ public class App {
             e.printStackTrace();
         }
     }
+
+    private static void runDumpCrawlEntry(Map.Entry<String, String> entry, DatasetDumpCrawler dump_crawl, String datasets_file) {
+        String crawl_description = entry.getValue();
+        //initiate crawl log
+        CrawlLog crawl_log = dump_crawl.initialiseCrawl(crawl_description);
+
+        //close the connection
+        try {
+            //crawl all the data from a specific dataset.
+            dump_crawl.processDatasetFromDump(crawl_log, datasets_file);
+
+            dump_crawl.mysql_connection.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * For a given start time (as long taken from the system.nanotime(), compute the time difference

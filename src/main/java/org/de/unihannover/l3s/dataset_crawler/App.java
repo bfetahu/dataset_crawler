@@ -21,9 +21,9 @@ import java.util.Map;
  */
 public class App {
     public static void main(String[] args) {
-        //String path = "C:\\Users\\besnik\\Documents\\intelliJ_workspace\\dataset_crawler\\dataset_crawler.ini";
-        Properties.properties = FileUtils.readIntoStringMap(args[0], "=", false);
-        //Properties.properties = FileUtils.readIntoStringMap(path, "=", false);
+        String path = "C:\\Users\\besnik\\Documents\\intelliJ_workspace\\dataset_crawler\\dataset_crawler.ini";
+        //Properties.properties = FileUtils.readIntoStringMap(args[0], "=", false);
+        Properties.properties = FileUtils.readIntoStringMap(path, "=", false);
         Connection mysql_connection = DatabaseConnection.getMySQLConnection(Properties.properties.get("mysql_host"), Properties.properties.get("mysql_schema"), Properties.properties.get("mysql_user"), Properties.properties.get("mysql_pwd"));
         CrawlOperations co = new CrawlOperations(mysql_connection);
         CrawlDBOperations co_db = new CrawlDBOperations(mysql_connection);

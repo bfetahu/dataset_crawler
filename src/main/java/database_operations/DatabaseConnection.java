@@ -14,7 +14,7 @@ import java.sql.DriverManager;
 public class DatabaseConnection {
      public static Connection getMySQLConnection(String host, String database, String username, String password) {
         Connection conn = null;
-        String dbURL = "jdbc:mysql://" + host + ":3306/" + database + "?useUnicode=true&characterEncoding=UTF-8";
+        String dbURL = "jdbc:mysql://" + host + "/" + database + "?useUnicode=true&characterEncoding=UTF-8";
 
         try {
             Class.forName("com.mysql.jdbc.Driver");

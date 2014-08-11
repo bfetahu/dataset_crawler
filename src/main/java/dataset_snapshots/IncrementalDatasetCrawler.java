@@ -130,7 +130,7 @@ public class IncrementalDatasetCrawler {
         List<Dataset> datasets = new ArrayList<Dataset>();
 
         for (String dataset_line : datasets_groups) {
-            String[] tmp = dataset_line.split(";");
+            String[] tmp = dataset_line.split("\t");
             if (tmp.length < 3) {
                 System.out.println(dataset_line);
                 continue;

@@ -448,14 +448,21 @@ public class CrawlDBOperations {
         PreparedStatement pst = null;
         try {
             pst = conn.prepareStatement("INSERT INTO resource_instances(resource_uri,dataset_id) VALUES(?,?)", Statement.RETURN_GENERATED_KEYS);
+            int counter = 0;
             for (String resource_uri : dataset.resources.keySet()) {
                 Resource resource = dataset.resources.get(resource_uri);
+                if(resource.resource_uri == null || resource.resource_uri.isEmpty()){
+                    continue;
+                }
 
                 pst.setString(1, resource.resource_uri);
                 pst.setInt(2, dataset.id);
 
                 pst.addBatch();
+                counter ++;
             }
+
+            System.out.println("Writting " + counter + " resources");
 
             int[] rst = pst.executeBatch();
             //get the generated auto increment keys.

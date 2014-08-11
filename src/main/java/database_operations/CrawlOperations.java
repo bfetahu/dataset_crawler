@@ -36,6 +36,9 @@ public class CrawlOperations {
             if (!existing_schemas.contains(schema.namespace_uri)) {
                 co.writeSchema(schema);
             }
+            else{
+                schema = co.loadSchema(schema_uri);
+            }
 
             //log the crawled namespaces for the respective datasets
 
@@ -130,17 +133,12 @@ public class CrawlOperations {
      * @param dataset
      */
     public void crawlDatasetResourceInstancesDump(Dataset dataset, Map<String, ResourceType> resource_types, Map<String, Resource> resource_instances, CrawlLog crawl_log, DataCrawler dc, CrawlDBOperations co) {
-        //load the resource types for the dataset first.
-        Map<String, ResourceType> dataset_resource_types = co.loadDatasetResourceTypes(dataset);
-        if (dataset_resource_types == null || dataset_resource_types.isEmpty()) {
-            return;
-        }
-        dataset.types = dataset_resource_types;
+        dataset.types = resource_types;
 
         //load for each resource type first only the resource URI to check which ones are deleted.
         for (final String type_uri : resource_types.keySet()) {
             //load the existing set of resource instances for the specific dataset and the corresponding resource type.
-            Map<Integer, Map.Entry<String, Map<Integer, String>>> existing_resource_uris = co.loadDatasetResourcesURI(dataset, dataset_resource_types.get(type_uri));
+            Map<Integer, Map.Entry<String, Map<Integer, String>>> existing_resource_uris = co.loadDatasetResourcesURI(dataset, resource_types.get(type_uri));
 
             //in case there is no data for the respective dataset then we perform a bulk load.
             if (existing_resource_uris == null || existing_resource_uris.isEmpty()) {
@@ -158,7 +156,7 @@ public class CrawlOperations {
                 }
 
                 //store the crawled dataset data
-                writeDatasetCrawledData(co, dataset, dataset_resource_types, type_uri, crawl_log);
+                writeDatasetCrawledData(co, dataset, resource_types, type_uri, crawl_log);
 
                 dataset.resources.clear();
                 continue;
@@ -231,7 +229,7 @@ public class CrawlOperations {
                     value.log_entry.put(crawl_log.crawl_id, Properties.crawl_log_status.added.name());
                 }
 
-                writeResourceCrawledData(co, resource, dataset, resource_instance_types, dataset_resource_types, type_uri, crawl_log);
+                writeResourceCrawledData(co, resource, dataset, resource_instance_types, resource_types, type_uri, crawl_log);
             }
 
             //write the resource instance type logs
@@ -614,6 +612,9 @@ public class CrawlOperations {
             Namespaces schema = schemas.get(schema_uri);
             if (!existing_schemas.contains(schema.namespace_uri)) {
                 co.writeSchema(schema);
+            }
+            else{
+                schema = co.loadSchema(schema_uri);
             }
 
             //log the crawled namespaces for the respective datasets

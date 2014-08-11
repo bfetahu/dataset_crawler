@@ -12,6 +12,7 @@ import org.semanticweb.yars.nx.parser.NxParser;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.sql.Connection;
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -69,7 +70,7 @@ public class DatasetDumpCrawler {
         Dataset dataset = new Dataset();
 
         for (String dataset_line : datasets_groups) {
-            String[] tmp = dataset_line.split(";");
+            String[] tmp = dataset_line.split("\t");
             if (tmp.length < 3) {
                 System.out.println(dataset_line);
                 continue;
@@ -94,11 +95,12 @@ public class DatasetDumpCrawler {
 
             String subject = triple[0].toString();
             String predicate = triple[1].toString();
-            String value = triple[1].toString();
+            String value = triple[2].toString();
 
             Resource resource = resource_instances.get(subject);
             resource = resource == null ? new Resource() : resource;
             resource_instances.put(subject, resource);
+            resource.resource_uri = subject;
 
             if (predicate.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
                 if (!resource_types.containsKey(value)) {
@@ -125,7 +127,7 @@ public class DatasetDumpCrawler {
         }
 
         System.out.println("Crawling data for dataset:  " + dataset.name);
-        Map.Entry<String, Boolean> dataset_availability = dc.isDatasetEndpointAvailable(dataset);
+        Map.Entry<String, Boolean> dataset_availability = new AbstractMap.SimpleEntry<String, Boolean>(dataset.name, true);
         //dataset metadata is stored.
         co_db.writeDatasetMetadata(dataset);
         //store the availability of the endpoint
